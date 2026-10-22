@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useRef, useCallback } from 'react';
 import Draggable from 'react-draggable';
 import { ResizableBox } from 'react-resizable';
 import ChatCheckbox from './checkbox';
@@ -17,10 +17,18 @@ const SHOUT_LIMIT = 180; // Seconds
 const MAX_LINES = 10;
 const MAX_SHOUT_LENGTH = 100;
 const MAX_HISTORY_LENGTH = 20;
+// How close to the bottom (in px) still counts as "following" new messages
+const STICK_TO_BOTTOM_THRESHOLD = 24;
 
 const SHOUTREGEXP = /№(.*?)№/gi;
 
+// Chat is laid out in 1080p pixels and scaled to the actual screen height
+const BASE_SCREEN_HEIGHT = 1080;
+const MIN_UI_SCALE = 0.75;
+const getUiScale = () => Math.max(MIN_UI_SCALE, window.innerHeight / BASE_SCREEN_HEIGHT);
+
 const Chat = (props) => {
+  const [uiScale, setUiScale] = useState(getUiScale);
   const [input, updateInput] = useState('');
   const [isInputFocus, changeInputFocus] = useState(false);
   const [hideNonRP, changeNonRPHide] = useState(false);
@@ -54,11 +62,40 @@ const Chat = (props) => {
 
   const writtenMessage = useRef('');
 
-  const handleScroll = () => {
-    if (chatRef.current) {
-      window.needToScroll = (chatRef.current.scrollTop === chatRef.current.scrollHeight - chatRef.current.offsetHeight);
+  // Follow new messages unless the player has scrolled up to read history.
+  // Only the player's own wheel scrolling stops following: scroll events also fire when
+  // text reflows (font load, resolution change, filters), and those must not count.
+  const scrollToBottomIfFollowing = () => {
+    const list = chatRef.current;
+    if (list && window.needToScroll) {
+      list.scrollTop = list.scrollHeight;
     }
   };
+
+  const handleScroll = () => {
+    const list = chatRef.current;
+    // Scroll positions can be fractional when the chat is scaled, so compare with a threshold
+    if (list && list.scrollHeight - list.scrollTop - list.clientHeight <= STICK_TO_BOTTOM_THRESHOLD) {
+      window.needToScroll = true;
+    }
+  };
+
+  const handleWheel = (e) => {
+    if (e.deltaY < 0) {
+      window.needToScroll = false;
+    }
+  };
+
+  useLayoutEffect(scrollToBottomIfFollowing, [props.messages, hideNonRP, fontSize, uiScale]);
+
+  useEffect(() => {
+    const list = chatRef.current;
+    if (!list || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(scrollToBottomIfFollowing);
+    observer.observe(list);
+    document.fonts?.ready.then(scrollToBottomIfFollowing);
+    return () => observer.disconnect();
+  }, []);
 
   const setEndOfContenteditable = (elem) => {
     const sel = window.getSelection();
@@ -103,6 +140,12 @@ const Chat = (props) => {
       }
     }
   }, [send, updateInput, input, isReset.current, shoutReset.current, shoutLength, doesIncludeShout]);
+
+  useEffect(() => {
+    const onResize = () => setUiScale(getUiScale());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
 
   useEffect(() => {
     window.needToScroll = true;
@@ -158,7 +201,6 @@ const Chat = (props) => {
   }, [isInputHidden]);
 
   useEffect(() => {
-    if (window.needToScroll) window.scrollToLastMessage();
     if (inputRef !== undefined && inputRef.current !== undefined) {
       inputRef.current.focus();
     }
@@ -197,7 +239,7 @@ const Chat = (props) => {
         <div
           className={`msg ${result[1] ? 'nonrp' : ''}`}
           key={`msg-${index}`}
-          style={{ marginLeft: '10px', opacity: msg.opacity }}
+          style={{ opacity: msg.opacity }}
         >
           {
             result[0]
@@ -210,24 +252,28 @@ const Chat = (props) => {
     <div className='fullPage'>
       <Draggable handle='#handle' disabled={!moveChat} bounds={'.fullPage'}>
         <div id='chat'>
+          <div className='chat-scale' style={{ transform: `scale(${uiScale})` }}>
           <div className="chat-main">
             <ResizableBox
               height={320}
               maxConstraints={[800, 1100]}
               minConstraints={[320, 320]}
               axis={'y'}
+              transformScale={uiScale}
               handle={
                  !isInputHidden &&
                  <div className='chat-corner'>
                    <img src={ChatCorner} />
                  </div>
               }
-              resizeHandles={['nw']}
+              resizeHandles={['se']}
               className={`list ${hideNonRP ? 'hideNonRP' : ''}`}
               id='handle'
             >
-              <div className='chat-list' style={{ fontSize }} ref={chatRef} onScroll={(e) => handleScroll()}>
-                {getList()}
+              <div className='chat-list' style={{ fontSize }} ref={chatRef} onScroll={handleScroll} onWheel={handleWheel}>
+                <div className='chat-messages'>
+                  {getList()}
+                </div>
               </div>
             </ResizableBox>
             <div
@@ -309,18 +355,21 @@ const Chat = (props) => {
                   inputRef={inputRef}
               />
           }
+          </div>
         </div>
       </Draggable>
       {
         (isSettingsOpened && !isInputHidden) &&
-        <Settings
-          fontSize={fontSize}
-          setFontSize={setFontSize}
-          isSoundsDisabled={disableDiceSounds}
-          setDisableSounds={setDisableDiceSounds}
-          showSendButton={showSendButton}
-          setShowSendButton={setSendButtonShow}
-        />
+        <div className='chat-settings-scale' style={{ transform: `scale(${uiScale})` }}>
+          <Settings
+            fontSize={fontSize}
+            setFontSize={setFontSize}
+            isSoundsDisabled={disableDiceSounds}
+            setDisableSounds={setDisableDiceSounds}
+            showSendButton={showSendButton}
+            setShowSendButton={setSendButtonShow}
+          />
+        </div>
       }
     </div>
   );
