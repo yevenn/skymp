@@ -10,12 +10,12 @@
   ],
   "master" : "",
   "maxPlayers" : 100,
-  "name" : "My Server",
+  "name" : "Numidium",
   "npcEnabled" : false,
   "npcSettings" : {},
   "offlineMode" : true,
   "port" : 7777,
-  "gamemodePath" : "E:/Jarldom/skymp/jarldom-gamemode/gamemode.js",
+  "gamemodePath" : "E:/Jarldom/skymp/numidium-gamemode/gamemode.js",
   "startPoints" :
   [
     {

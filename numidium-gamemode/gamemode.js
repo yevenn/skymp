@@ -1,4 +1,4 @@
-// Jarldom gamemode: text roleplay chat.
+// Numidium gamemode: text roleplay chat.
 //
 // Flow:
 //   chat widget (browser) --skyrimPlatform.sendMessage('rpchat:send')--> event source
@@ -320,10 +320,10 @@ mp._rpChatSend = (actorId, text) => {
 
 mp._rpChatJoin = (actorId) => {
   try {
-    system(actorId, `Welcome, ${getName(actorId)}. Press Enter to chat, /help for commands.`);
+    system(actorId, `Welcome to Numidium, ${getName(actorId)}. Press Enter to chat, /help for commands.`);
   } catch (e) {
     console.error('[chat] failed to greet player', e);
   }
 };
 
-console.log('[jarldom] gamemode loaded: roleplay chat');
+console.log('[numidium] gamemode loaded: roleplay chat');
