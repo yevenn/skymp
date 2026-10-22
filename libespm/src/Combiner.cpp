@@ -5,6 +5,7 @@
 #include "libespm/Utils.h"
 #include "libespm/espm.h"
 #include <array>
+#include <cctype>
 #include <fmt/format.h>
 #include <string>
 
@@ -25,12 +26,29 @@ void espm::Combiner::AddSource(Browser* src, const char* fileName) noexcept
   pImpl->sources[pImpl->numSources++] = { src, fileName, nullptr };
 }
 
+namespace {
+bool HasEslExtension(const std::string& fileName)
+{
+  if (fileName.size() < 4) {
+    return false;
+  }
+  std::string ext = fileName.substr(fileName.size() - 4);
+  for (auto& c : ext) {
+    c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+  }
+  return ext == ".esl";
+}
+}
+
 std::unique_ptr<espm::CombineBrowser> Combiner::Combine()
 {
   if (pImpl->numSources > std::size(pImpl->sources)) {
     throw CombineError("too many sources");
   }
 
+  // Like the game, number regular and light plugins separately, each in load
+  // order. A plugin is light if it has the ESL flag or the .esl extension
+  uint16_t numRegular = 0, numLight = 0;
   for (size_t i = 0; i < pImpl->numSources; ++i) {
     auto& src = pImpl->sources[i];
     if (!src.br) {
@@ -41,13 +59,29 @@ std::unique_ptr<espm::CombineBrowser> Combiner::Combine()
     if (!tes4) {
       throw CombineError(src.fileName + " doesn't have TES4 record");
     }
+
+    if (tes4->IsLight() || HasEslExtension(src.fileName)) {
+      if (numLight >= kMaxLightPlugins) {
+        throw CombineError("too many light plugins");
+      }
+      src.slot = { true, numLight++ };
+    } else {
+      if (numRegular >= kMaxRegularPlugins) {
+        throw CombineError("too many regular plugins");
+      }
+      src.slot = { false, numRegular++ };
+    }
+  }
+
+  for (size_t i = 0; i < pImpl->numSources; ++i) {
+    auto& src = pImpl->sources[i];
+
+    const auto tes4 = Convert<TES4>(src.br->LookupById(0));
     espm::CompressedFieldsCache dummyCache;
     const auto masters = tes4->GetData(dummyCache).masters;
 
-    auto toComb = std::make_unique<IdMapping>();
-    toComb->fill(0xff);
-    auto toRaw = std::make_unique<IdMapping>();
-    toRaw->fill(0xff);
+    auto toComb = std::make_unique<IdMapping>(IdMapping::Direction::kToCombined);
+    auto toRaw = std::make_unique<IdMapping>(IdMapping::Direction::kToRaw);
     size_t m = 0;
     for (m = 0; m < masters.size(); ++m) {
       const int globalIdx = pImpl->GetFileIndex(masters[m]);
@@ -55,11 +89,12 @@ std::unique_ptr<espm::CombineBrowser> Combiner::Combine()
         throw CombineError(src.fileName + " has unresolved dependency (" +
                            masters[m] + ")");
       }
-      (*toComb)[m] = static_cast<uint8_t>(globalIdx);
-      (*toRaw)[globalIdx] = static_cast<uint8_t>(m);
+      const auto masterSlot = pImpl->sources[globalIdx].slot;
+      toComb->Add(static_cast<uint8_t>(m), masterSlot);
+      toRaw->Add(static_cast<uint8_t>(m), masterSlot);
     }
-    (*toComb)[m] = static_cast<uint8_t>(i);
-    (*toRaw)[i] = static_cast<uint8_t>(m);
+    toComb->Add(static_cast<uint8_t>(m), src.slot);
+    toRaw->Add(static_cast<uint8_t>(m), src.slot);
     src.toComb = std::move(toComb);
     src.toRaw = std::move(toRaw);
   }

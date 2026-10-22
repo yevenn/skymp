@@ -12,8 +12,7 @@ class PapyrusUtils
 {
 public:
   static Napi::Value GetJsObjectFromPapyrusObject(
-    Napi::Env env, const VarValue& value,
-    const std::vector<std::string>& espmFilenames)
+    Napi::Env env, const VarValue& value, const espm::LoadOrder& espmFilenames)
   {
     auto ptr = static_cast<IGameObject*>(value);
     if (!ptr) {
@@ -49,8 +48,7 @@ public:
   }
 
   static Napi::Value GetJsValueFromPapyrusValue(
-    Napi::Env env, const VarValue& value,
-    const std::vector<std::string>& espmFilenames)
+    Napi::Env env, const VarValue& value, const espm::LoadOrder& espmFilenames)
   {
     if (value.promise) {
       Napi::Promise::Deferred deferred = Napi::Promise::Deferred::New(env);
@@ -188,8 +186,7 @@ public:
           auto desc = NapiHelper::ExtractString(obj.Get("desc"), "desc");
           auto type = NapiHelper::ExtractString(obj.Get("type"), "type");
 
-          const auto espmFileNames = wst.GetEspm().GetFileNames();
-          uint32_t id = FormDesc::FromString(desc).ToFormId(espmFileNames);
+          uint32_t id = FormDesc::FromString(desc).ToFormId(wst.espmFiles);
 
           if (type == "form") {
             MpObjectReference& refr = wst.GetFormAt<MpObjectReference>(id);

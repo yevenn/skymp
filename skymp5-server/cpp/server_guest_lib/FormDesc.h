@@ -1,4 +1,5 @@
 #pragma once
+#include "libespm/LoadOrder.h"
 #include <cstdint>
 #include <filesystem>
 #include <string>
@@ -18,9 +19,8 @@ public:
   std::string ToString(char delimiter = ':') const;
   static FormDesc FromString(const std::string& str, char delimiter = ':');
 
-  uint32_t ToFormId(const std::vector<std::string>& files) const;
-  static FormDesc FromFormId(uint32_t formId,
-                             const std::vector<std::string>& files);
+  uint32_t ToFormId(const espm::LoadOrder& files) const;
+  static FormDesc FromFormId(uint32_t formId, const espm::LoadOrder& files);
 
   friend bool operator==(const FormDesc& left, const FormDesc& right)
   {

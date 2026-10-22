@@ -232,7 +232,7 @@ public:
   void SetEnableConsoleCommandsForAllSetting(bool enable);
 
 public:
-  std::vector<std::string> espmFiles;
+  espm::LoadOrder espmFiles;
   std::unordered_map<int32_t, std::set<uint32_t>> actorIdByProfileId;
   std::unordered_map<std::string, std::set<uint32_t>>
     actorIdByPrivateIndexedProperty;

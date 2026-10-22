@@ -138,28 +138,41 @@ export class SettingsService extends ClientListener {
     states.start();
   }
 
+  // The game server serves its resources (manifest.json included) over HTTP
+  // next to the game port; see uiPort in skymp5-server/ts/ui.ts
+  public getServerResourcesUrl() {
+    const host = this.sp.settings["skymp5-client"]["server-ip"] as string;
+    const port = this.sp.settings["skymp5-client"]["server-port"] as number;
+    const resourcesPort = port === 7777 ? 3000 : port + 1;
+    return `http://${host}:${resourcesPort}`;
+  }
+
   public async getServerMods(): Promise<Mod[]> {
-    const masterApiClient = this.makeMasterApiClient();
+    // Ask the game server first: offline/local servers aren't registered on
+    // the master server, so the master would never have their manifest
+    const sources = [
+      { name: 'game server', client: new HttpClient(this.getServerResourcesUrl()) as IHttpClientWithCallback, path: '/manifest.json' },
+      { name: 'master server', client: this.makeMasterApiClient(), path: `/api/servers/${this.getServerMasterKey()}/manifest.json` },
+    ];
 
-    const masterKey = this.getServerMasterKey();
-    printConsole(masterKey);
-
-    for (let attempt = 0; attempt < 5; ++attempt) {
-      try {
-        printConsole(`Trying to get server mods, attempt ${attempt}`);
-        const res = await masterApiClient.get(`/api/servers/${masterKey}/manifest.json`);
-        if (res.status != 200) {
-          throw new Error(`status code ${res.status}, error ${res.error}`);
+    for (const source of sources) {
+      for (let attempt = 0; attempt < 3; ++attempt) {
+        try {
+          printConsole(`Trying to get server mods from the ${source.name}, attempt ${attempt}`);
+          const res = await source.client.get(source.path);
+          if (res.status != 200) {
+            throw new Error(`status code ${res.status}, error ${res.error}`);
+          }
+          const manifest = JSON.parse(res.body) as ServerManifest;
+          if (manifest.versionMajor !== 1) {
+            printConsole(`server manifest version is ${manifest.versionMajor}, we expect 1`);
+            return [];
+          }
+          return manifest.mods;
+        } catch (e) {
+          printConsole(`Request/parse error: ${e}`);
+          await Utility.wait(0.1 + Math.random());
         }
-        const manifest = JSON.parse(res.body) as ServerManifest;
-        if (manifest.versionMajor !== 1) {
-          printConsole(`server manifest version is ${manifest.versionMajor}, we expect 1`);
-          return [];
-        }
-        return manifest.mods;
-      } catch (e) {
-        printConsole(`Request/parse error: ${e}`);
-        await Utility.wait(0.1 + Math.random());
       }
     }
 

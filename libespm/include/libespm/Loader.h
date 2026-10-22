@@ -14,6 +14,7 @@ namespace fs = std::filesystem;
 #include "Browser.h"
 #include "Combiner.h"
 #include "IBuffer.h"
+#include "LoadOrder.h"
 #include "espm.h"
 
 namespace espm {
@@ -41,6 +42,9 @@ public:
   const CombineBrowser& GetBrowser() const noexcept;
 
   std::vector<std::string> GetFileNames() const noexcept;
+
+  // File names plus where each file's records live in combined form ids
+  LoadOrder GetLoadOrder() const;
 
   struct FileInfo
   {

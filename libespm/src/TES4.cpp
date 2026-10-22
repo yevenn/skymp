@@ -23,4 +23,9 @@ TES4::Data TES4::GetData(
   return result;
 }
 
+bool TES4::IsLight() const noexcept
+{
+  return (flags & kLightFlag) != 0;
+}
+
 }

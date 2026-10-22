@@ -6,7 +6,9 @@
     "E:/Jarldom/SkyrimDev/Data/Update.esm",
     "E:/Jarldom/SkyrimDev/Data/Dawnguard.esm",
     "E:/Jarldom/SkyrimDev/Data/HearthFires.esm",
-    "E:/Jarldom/SkyrimDev/Data/Dragonborn.esm"
+    "E:/Jarldom/SkyrimDev/Data/Dragonborn.esm",
+    "E:/Jarldom/SkyrimDev/Data/Kad_MoonMonkRobes.esp",
+    "E:/Jarldom/SkyrimDev/Data/Mage Clothing Expansion.esp"
   ],
   "master" : "",
   "maxPlayers" : 100,
@@ -14,6 +16,7 @@
   "npcEnabled" : false,
   "npcSettings" : {},
   "offlineMode" : true,
+  "enableConsoleCommandsForAll" : true,
   "port" : 7777,
   "gamemodePath" : "E:/Jarldom/skymp/numidium-gamemode/gamemode.js",
   "startPoints" :

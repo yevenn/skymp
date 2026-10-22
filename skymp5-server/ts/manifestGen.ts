@@ -7,7 +7,24 @@ interface ManifestModEntry {
   filename: string;
   crc32: number;
   size: number;
+  // Plugins only: loaded as a light plugin (ESL flag or .esl extension)
+  isLight?: boolean;
 }
+
+// TES4 record header: type (4 bytes), data size (4), flags (4)
+const kTes4FlagsOffset = 8;
+const kLightPluginFlag = 0x200;
+
+const isLightPlugin = (espmName: string, buf: Uint8Array) => {
+  if (espmName.toLowerCase().endsWith(".esl")) {
+    return true;
+  }
+  if (buf.length < kTes4FlagsOffset + 4) {
+    return false;
+  }
+  const flags = Buffer.from(buf.buffer, buf.byteOffset, buf.length).readUInt32LE(kTes4FlagsOffset);
+  return (flags & kLightPluginFlag) !== 0;
+};
 
 interface Manifest {
   versionMajor: number;
@@ -16,7 +33,7 @@ interface Manifest {
 }
 
 const getBsaNameByEspmName = (espmName: string) => {
-  if (espmName.endsWith(".esp") || espmName.endsWith(".esm")) {
+  if (espmName.endsWith(".esp") || espmName.endsWith(".esm") || espmName.endsWith(".esl")) {
     const nameNoExt = espmName.split(".").slice(0, -1).join(".");
     return nameNoExt + ".bsa";
   }
@@ -44,6 +61,7 @@ export const generateManifest = (settings: Settings): void => {
       crc32: crc32.buf(buf),
       filename: espmName,
       size: buf.length,
+      isLight: isLightPlugin(espmName, buf),
     });
 
     const bsaName = getBsaNameByEspmName(espmName);

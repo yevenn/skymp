@@ -1,0 +1,4 @@
+# Plugins enabled in the SkyrimDev test copy, in load order, after the base game.
+# Must match the server's loadOrder in server-settings.json.
+Kad_MoonMonkRobes.esp
+Mage Clothing Expansion.esp

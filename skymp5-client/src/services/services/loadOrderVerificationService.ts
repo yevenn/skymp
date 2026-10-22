@@ -18,43 +18,41 @@ export class LoadOrderVerificationService extends ClientListener {
   }
 
   private onceUpdate() {
-    this.verifyLoadOrder();
+    // An exception escaping this 'update' handler has frozen the game right
+    // after loading in, so never let one out
+    try {
+      this.verifyLoadOrder();
+    } catch (e) {
+      printConsole('Load order check crashed:', e);
+      this.updateText('LOAD ORDER CHECK FAILED!\nCheck console for details.', [255, 0, 0, 1]);
+    }
   }
 
   private verifyLoadOrder() {
     const settingsService = this.controller.lookupListener(SettingsService);
 
     this.resetText();
+    // The game numbers regular and light plugins separately (light ones share
+    // the FE prefix), so each list has to match on its own
     const clientMods = this.getClientMods();
+    const clientLightMods = this.getClientLightMods();
     this.printModOrder('Client load order:', clientMods);
+    this.printModOrder('Client light plugins:', clientLightMods);
     return settingsService.getServerMods()
-      .then((serverMods) => {
+      .then((allServerMods) => {
+        // The manifest also lists .bsa archives, which aren't part of the load order
+        const serverPlugins = allServerMods.filter((mod) => this.isPlugin(mod.filename));
+        const serverMods = serverPlugins.filter((mod) => !mod.isLight);
+        const serverLightMods = serverPlugins.filter((mod) => mod.isLight);
         this.printModOrder('Server load order:', serverMods);
-        if (clientMods.length < serverMods.length) {
-          throw new Error(`Missing some server mods. Server has ${serverMods.length}, we have ${clientMods.length}`);
-        }
-        if (clientMods.length > serverMods.length) {
-          this.updateText(
-            'LOAD ORDER WARNING: you have more mods than server!\n(or could not receive server mod list)\nCheck console for details.',
-            [255, 255, 0, 1], 5,
-          );
-        }
-        let fail = [];
-        for (let i = 0; i < serverMods.length; ++i) {
-          // Need case-insensitive check for 1.6+
-          if (
-            clientMods[i].filename.toLowerCase() !== serverMods[i].filename.toLowerCase() ||
-            clientMods[i].size !== serverMods[i].size ||
-            clientMods[i].crc32 !== serverMods[i].crc32
-          ) {
-            fail.push(i);
-            printConsole(`${i}-th mod (numbered from 0) does not match.`);
-            printConsole(`Server has ${JSON.stringify(serverMods[i])}`);
-            printConsole(`We have ${JSON.stringify(clientMods[i])}`);
-          }
-        }
+        this.printModOrder('Server light plugins:', serverLightMods);
+
+        const fail = [
+          ...this.compareMods('mod', clientMods, serverMods),
+          ...this.compareMods('light plugin', clientLightMods, serverLightMods),
+        ];
         if (fail.length !== 0) {
-          throw new Error('Load order check failed! Indices: ' + JSON.stringify(fail));
+          throw new Error('Load order check failed! ' + fail.join('; '));
         }
       })
       .catch((err) => {
@@ -123,6 +121,42 @@ export class LoadOrderVerificationService extends ClientListener {
     return this.enumerateClientMods(Game.getModCount, Game.getModName);
   };
 
+  private getClientLightMods() {
+    return this.enumerateClientMods(Game.getLightModCount, Game.getLightModName);
+  };
+
+  private isPlugin(filename: string) {
+    return /\.(esp|esm|esl)$/i.test(filename);
+  }
+
+  // Returns a description of each mismatch, empty if the lists match
+  private compareMods(kind: string, clientMods: Mod[], serverMods: Mod[]): string[] {
+    const fail = [];
+    if (clientMods.length < serverMods.length) {
+      fail.push(`missing some server ${kind}s: server has ${serverMods.length}, we have ${clientMods.length}`);
+    }
+    if (clientMods.length > serverMods.length) {
+      this.updateText(
+        `LOAD ORDER WARNING: you have more ${kind}s than server!\n(or could not receive server mod list)\nCheck console for details.`,
+        [255, 255, 0, 1], 5,
+      );
+    }
+    for (let i = 0; i < Math.min(clientMods.length, serverMods.length); ++i) {
+      // Need case-insensitive check for 1.6+
+      if (
+        clientMods[i].filename.toLowerCase() !== serverMods[i].filename.toLowerCase() ||
+        clientMods[i].size !== serverMods[i].size ||
+        clientMods[i].crc32 !== serverMods[i].crc32
+      ) {
+        fail.push(`${kind} #${i} does not match`);
+        printConsole(`${i}-th ${kind} (numbered from 0) does not match.`);
+        printConsole(`Server has ${JSON.stringify(serverMods[i])}`);
+        printConsole(`We have ${JSON.stringify(clientMods[i])}`);
+      }
+    }
+    return fail;
+  }
+
   private printModOrder(header: string, order: Mod[]) {
     printConsole(header);
     for (const [i, mod] of Object.entries(order)) {
@@ -130,18 +164,14 @@ export class LoadOrderVerificationService extends ClientListener {
     }
   };
 
+  // SkyrimPlatform may throw plain strings rather than Error objects, so any
+  // failure means "unknown" here instead of escaping
   private getFileInfoSafe(filename: string) {
     try {
       return this.sp.getFileInfo(filename);
     } catch (e) {
-      const message = (e as Record<string, unknown>).message;
-
-      if (typeof message === "string" && message.includes('is not a valid argument')) {
-        logTrace(this, `Failed to get file info for`, filename);
-        return { crc32: 0, size: 0 };
-      } else {
-        throw e;
-      }
+      logTrace(this, `Failed to get file info for`, filename, '-', e);
+      return { crc32: 0, size: 0 };
     }
   }
 }

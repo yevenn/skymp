@@ -87,7 +87,7 @@ void WorldState::AttachEspm(espm::Loader* espm_,
   espm = espm_;
   formCallbacksFactory = formCallbacksFactory_;
   espmCache.reset(new espm::CompressedFieldsCache);
-  espmFiles = espm->GetFileNames();
+  espmFiles = espm->GetLoadOrder();
 }
 
 void WorldState::AttachSaveStorage(
@@ -890,14 +890,20 @@ std::shared_ptr<std::vector<uint32_t>> WorldState::GetAllForms(
     // Deduplicate form IDs
     // TODO: Consider cleaning changeFormsForDeferredLoad after adding a form
     // so we don't need de-duplicate in runtime
+    // Mod index 0xff keeps meaning runtime-created forms (FF xxxxxx)
+    auto isFromMod = [&](uint32_t formId) {
+      return modIndex == 0xff ? (formId >> 24) == 0xff
+                              : GetFileIdx(formId) == modIndex;
+    };
+
     std::unordered_set<uint32_t> formIds;
     for (const auto& p : forms) {
-      if ((p.first >> 24) == modIndex) {
+      if (isFromMod(p.first)) {
         formIds.insert(p.first);
       }
     }
     for (const auto& p : pImpl->changeFormsForDeferredLoad) {
-      if ((p.first >> 24) == modIndex) {
+      if (isFromMod(p.first)) {
         formIds.insert(p.first);
       }
     }
@@ -1160,7 +1166,9 @@ bool WorldState::IsNpcAllowed(uint32_t refrId) const noexcept
 
 uint32_t WorldState::GetFileIdx(uint32_t formId) const noexcept
 {
-  return formId >> 24;
+  // Light plugins share the FE prefix, so the top byte isn't the file index.
+  // Unknown and runtime-created forms become 0xffffffff, which is never valid
+  return static_cast<uint32_t>(espmFiles.GetFileIndex(formId));
 }
 
 void WorldState::SetNpcSettings(

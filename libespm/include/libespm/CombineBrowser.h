@@ -36,6 +36,9 @@ public:
   const IdMapping* GetCombMapping(size_t fileIndex) const noexcept;
   const IdMapping* GetRawMapping(size_t fileIndex) const noexcept;
 
+  // Where the file's records live in combined form ids
+  FileSlot GetFileSlot(size_t fileIndex) const noexcept;
+
   // CompressedFieldsCache is not logically related to Combiner, this method is
   // added for usability
   espm::CompressedFieldsCache& GetCache() const noexcept;
@@ -50,6 +53,7 @@ private:
     Browser* br = nullptr;
     std::string fileName;
     std::unique_ptr<espm::IdMapping> toComb, toRaw;
+    FileSlot slot;
   };
 
   struct Impl

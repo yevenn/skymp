@@ -63,6 +63,16 @@ std::vector<std::string> Loader::GetFileNames() const noexcept
   return res;
 }
 
+LoadOrder Loader::GetLoadOrder() const
+{
+  std::vector<FileSlot> slots;
+  slots.reserve(entries.size());
+  for (size_t i = 0; i < entries.size(); ++i) {
+    slots.push_back(combineBrowser->GetFileSlot(i));
+  }
+  return LoadOrder(GetFileNames(), std::move(slots));
+}
+
 std::map<std::string, Loader::FileInfo> Loader::GetFilesInfo() const
 {
   std::map<std::string, FileInfo> res;

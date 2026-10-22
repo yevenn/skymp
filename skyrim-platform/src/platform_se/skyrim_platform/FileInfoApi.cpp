@@ -9,7 +9,7 @@ Napi::Value FileInfo(const Napi::CallbackInfo& info)
 {
   auto filename = NapiHelper::ExtractString(info[0], "filename");
 
-  if (!ValidateFilename(filename, /*allowDots*/ true)) {
+  if (!ValidateDataFilename(filename)) {
     throw InvalidArgumentException("filename", filename);
   }
 

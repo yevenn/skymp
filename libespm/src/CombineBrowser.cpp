@@ -146,6 +146,14 @@ const IdMapping* CombineBrowser::GetRawMapping(size_t fileIndex) const noexcept
   return pImpl->sources[fileIndex].toRaw.get();
 }
 
+FileSlot CombineBrowser::GetFileSlot(size_t fileIndex) const noexcept
+{
+  if (fileIndex >= pImpl->numSources) {
+    return FileSlot();
+  }
+  return pImpl->sources[fileIndex].slot;
+}
+
 CompressedFieldsCache& CombineBrowser::GetCache() const noexcept
 {
   return pImpl->cache;

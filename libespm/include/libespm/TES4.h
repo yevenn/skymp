@@ -29,6 +29,11 @@ public:
   };
 
   Data GetData(CompressedFieldsCache& compressedFieldsCache) const noexcept;
+
+  // ESL flag: the plugin is loaded as a light plugin (FE xxx yyy form ids)
+  static constexpr uint32_t kLightFlag = 0x200;
+
+  bool IsLight() const noexcept;
 };
 
 static_assert(sizeof(TES4) == sizeof(RecordHeader));

@@ -43,7 +43,7 @@ FormDesc FormDesc::FromString(const std::string& str, char delimiter)
   return res;
 }
 
-uint32_t FormDesc::ToFormId(const std::vector<std::string>& files) const
+uint32_t FormDesc::ToFormId(const espm::LoadOrder& files) const
 {
   // Workaround legacy tests throwing exceptions (drop support for PartOne
   // instances without espm to remove this)
@@ -56,25 +56,18 @@ uint32_t FormDesc::ToFormId(const std::vector<std::string>& files) const
   if (file.empty()) {
     realFormId = 0xff000000 + shortFormId;
   } else {
-    int fileIdx = -1;
-    int numFiles = static_cast<int>(files.size());
-    for (int i = 0; i < numFiles; ++i) {
-      if (files[i] == file) {
-        fileIdx = i;
-        break;
-      }
-    }
+    const int32_t fileIdx = files.FindFile(file);
     if (fileIdx == -1) {
       throw std::runtime_error(file + " not found in loaded files");
     }
 
-    realFormId = fileIdx * 0x01000000 + shortFormId;
+    // Light plugins map to FE xxx yyy, regular ones to their top byte
+    realFormId = files.ToFormId(fileIdx, shortFormId);
   }
   return realFormId;
 }
 
-FormDesc FormDesc::FromFormId(uint32_t formId,
-                              const std::vector<std::string>& files)
+FormDesc FormDesc::FromFormId(uint32_t formId, const espm::LoadOrder& files)
 {
   // Workaround legacy tests throwing exceptions (drop support for PartOne
   // instances without espm to remove this)
@@ -84,13 +77,14 @@ FormDesc FormDesc::FromFormId(uint32_t formId,
 
   FormDesc res;
   if (formId < 0xff000000) {
-    int fileIdx = formId / 0x01000000;
-    if (fileIdx >= static_cast<int>(files.size())) {
-      throw std::runtime_error("FromFormId failed due to invalid file index " +
-                               std::to_string(fileIdx));
+    const int32_t fileIdx = files.GetFileIndex(formId);
+    if (fileIdx == -1) {
+      throw std::runtime_error(
+        "FromFormId failed due to invalid file index for form id " +
+        std::to_string(formId));
     }
     res.file = files[fileIdx];
-    res.shortFormId = formId % 0x01000000;
+    espm::SplitCombinedId(formId, nullptr, &res.shortFormId);
   } else {
     res.shortFormId = formId - 0xff000000;
   }

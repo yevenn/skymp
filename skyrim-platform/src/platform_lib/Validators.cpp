@@ -12,6 +12,32 @@ bool ValidateFilename(std::string_view filename, bool allowDots)
   return true;
 }
 
+bool ValidateDataFilename(std::string_view filename)
+{
+  if (filename.empty() || filename == "." || filename == "..") {
+    return false;
+  }
+  for (char c : filename) {
+    const auto u = static_cast<unsigned char>(c);
+    if (u < 0x20 || u == 0x7f) {
+      return false;
+    }
+    switch (c) {
+      case '/':
+      case '\\':
+      case ':':
+      case '*':
+      case '?':
+      case '"':
+      case '<':
+      case '>':
+      case '|':
+        return false;
+    }
+  }
+  return true;
+}
+
 bool ValidateRelativePath(std::string_view path)
 {
   for (size_t i = 0; i < path.size(); ++i) {
