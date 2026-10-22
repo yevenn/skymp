@@ -1,0 +1,27 @@
+{
+  "dataDir" : "data",
+  "loadOrder" : 
+  [
+    "E:/Jarldom/SkyrimDev/Data/Skyrim.esm",
+    "E:/Jarldom/SkyrimDev/Data/Update.esm",
+    "E:/Jarldom/SkyrimDev/Data/Dawnguard.esm",
+    "E:/Jarldom/SkyrimDev/Data/HearthFires.esm",
+    "E:/Jarldom/SkyrimDev/Data/Dragonborn.esm"
+  ],
+  "master" : "",
+  "maxPlayers" : 100,
+  "name" : "My Server",
+  "npcEnabled" : false,
+  "npcSettings" : {},
+  "offlineMode" : true,
+  "port" : 7777,
+  "gamemodePath" : "E:/Jarldom/skymp/jarldom-gamemode/gamemode.js",
+  "startPoints" :
+  [
+    {
+      "pos" : [22659, -8697, -3594],
+      "worldOrCell" : "0x1a26f",
+      "angleZ" : 268
+    }
+  ]
+}
