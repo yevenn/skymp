@@ -1,4 +1,29 @@
 # Plugins enabled in the SkyrimDev test copy, in load order, after the base game.
 # Must match the server's loadOrder in server-settings.json.
+Sentinel - Master Plugin.esp
+SkyUI_SE.esp
+CommonClothes.esp
+JK's Whiterun's Outskirts.esp
+Cloaks&Capes.esp
+JKs Whiterun.esp
+MoreCraftableEquipment.esp
+DIS_Heavy_Legion.esp
+Sentinel.esp
+Sentinel - Priests and Acolytes.esp
+JK's Riverwood.esp
 Kad_MoonMonkRobes.esp
+Sentinel - More Craftable Equipment.esp
+MCMHelper.esp
+MoreCraftableEquipment_CloaksandCapes.esp
+Sentinel - City Guards.esp
+The Great Cities - Minor Cities and Towns.esp
+The Great City of Solitude.esp
+WindhelmSSE.esp
 Mage Clothing Expansion.esp
+Common Clothing Expanded.esp
+Arena - Markarth Side.esp
+aaaGraniteHill.esp
+AnotherOakwood.esp
+North Keep.esp
+OarsRest.esp
+cheddars_mashups.esp
