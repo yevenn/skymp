@@ -27,3 +27,9 @@ AnotherOakwood.esp
 North Keep.esp
 OarsRest.esp
 cheddars_mashups.esp
+# Character customization: RaceMenu, CBBE SFW, HIMBO (appended, keeps earlier slots)
+RaceMenu.esp
+RaceMenuPlugin.esp
+CBBE.esp
+HIMBO.esp
+RaceMenuMorphsHIMBO.esp

@@ -33,7 +33,12 @@
     "E:/Jarldom/SkyrimDev/Data/AnotherOakwood.esp",
     "E:/Jarldom/SkyrimDev/Data/North Keep.esp",
     "E:/Jarldom/SkyrimDev/Data/OarsRest.esp",
-    "E:/Jarldom/SkyrimDev/Data/cheddars_mashups.esp"
+    "E:/Jarldom/SkyrimDev/Data/cheddars_mashups.esp",
+    "E:/Jarldom/SkyrimDev/Data/RaceMenu.esp",
+    "E:/Jarldom/SkyrimDev/Data/RaceMenuPlugin.esp",
+    "E:/Jarldom/SkyrimDev/Data/CBBE.esp",
+    "E:/Jarldom/SkyrimDev/Data/HIMBO.esp",
+    "E:/Jarldom/SkyrimDev/Data/RaceMenuMorphsHIMBO.esp"
   ],
   "master" : "",
   "maxPlayers" : 100,
