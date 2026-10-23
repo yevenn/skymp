@@ -304,12 +304,17 @@ export const getDiff = (
 };
 
 export const getInventory = (refr: ObjectReference): Inventory => {
-  return squash(
+  const inv = squash(
     sumInventories(
       getBaseContainerAsInventory(refr),
       getExtraContainerChangesAsInventory(refr)
     )
   );
+  // Removals can be counted before the base container has the item, e.g. while
+  // the inventory is rebuilt after login. A negative count makes the native
+  // serializer drop the whole message (UpdateEquipment, ...), and no inventory
+  // holds fewer than zero of anything
+  return { entries: inv.entries.filter((e) => e.count > 0) };
 };
 
 const basesReset = (): Set<number> => {
