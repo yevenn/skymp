@@ -1,4 +1,5 @@
-﻿using System.Net.Http;
+﻿using System.IO;
+using System.Net.Http;
 using System.Windows;
 using System.Windows.Media;
 using Microsoft.Win32;
@@ -25,8 +26,14 @@ public partial class MainWindow : Window
         HostBox.Text = settings.ServerHost;
         PortBox.Text = settings.ServerPort.ToString();
         ProfileBox.Text = settings.ProfileId?.ToString() ?? "";
+        PackageDirBox.Text = settings.ClientPackageDir ?? "";
         RefreshStatus();
     }
+
+    private string? PackageInfoPath =>
+        settings.ClientPackageDir is string dir && File.Exists(Path.Combine(dir, ClientPackage.InfoFile))
+            ? Path.Combine(dir, ClientPackage.InfoFile)
+            : null;
 
     private void RefreshStatus()
     {
@@ -60,6 +67,18 @@ public partial class MainWindow : Window
             else SetStatus(GameStatus, Good, $"Ready, version {SteamSkyrim.GetVersion(copy.Dir)}.");
             CopyButton.Content = "Update";
         }
+
+        var installed = ClientPackage.ReadInstalled(copy.Dir);
+        var available = PackageInfoPath is string info ? ClientPackage.ReadInfo(info) : null;
+        var skse = Skse.IsInstalled(copy.Dir) ? "SKSE installed" : "SKSE not installed";
+        if (available == null)
+            SetStatus(PackageStatus, installed == null ? Bad : Muted,
+                $"{skse}. Client {installed?.Version ?? "not installed"}; pick the folder with numidium-client.json to install or update it.");
+        else if (installed?.Version == available.Version)
+            SetStatus(PackageStatus, Skse.IsInstalled(copy.Dir) ? Good : Bad, $"{skse}. Client {installed.Version}, up to date.");
+        else
+            SetStatus(PackageStatus, Muted, $"{skse}. Client {installed?.Version ?? "not installed"}; {available.Version} is installed by {CopyButton.Content}.");
+
         PlayButton.IsEnabled = !busy;
         CopyButton.IsEnabled = !busy;
     }
@@ -94,6 +113,21 @@ public partial class MainWindow : Window
         GameDirBox_LostFocus(sender, e);
     }
 
+    private void BrowsePackage_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Folder with numidium-client.json" };
+        if (dialog.ShowDialog(this) != true) return;
+        if (!File.Exists(Path.Combine(dialog.FolderName, ClientPackage.InfoFile)))
+        {
+            Log($"{dialog.FolderName} has no {ClientPackage.InfoFile}.");
+            return;
+        }
+        settings.ClientPackageDir = dialog.FolderName;
+        PackageDirBox.Text = dialog.FolderName;
+        settings.Save();
+        RefreshStatus();
+    }
+
     private void GameDirBox_LostFocus(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(GameDirBox.Text)) return;
@@ -123,8 +157,33 @@ public partial class MainWindow : Window
                 CopyProgress.Value = p.Done;
             });
             var result = await Task.Run(() => copy.Update(source, progress));
-            Log($"Done: {result.Copied} copied ({result.BytesWritten / (1024 * 1024)} MB), " +
+            Log($"Base game: {result.Copied} copied ({result.BytesWritten / (1024 * 1024)} MB), " +
                 $"{result.Linked} hard-linked, {result.Unchanged} already up to date.");
+
+            if (!Skse.IsInstalled(copy.Dir))
+            {
+                Log($"Downloading SKSE from {Skse.Url}...");
+                using var http = new HttpClient();
+                var archive = await Skse.DownloadAsync(LauncherSettings.CacheDir, http);
+                var files = await Task.Run(() => Skse.Install(copy.Dir, archive));
+                Log($"SKSE installed ({files.Count} files).");
+            }
+
+            if (PackageInfoPath is string info)
+            {
+                var available = ClientPackage.ReadInfo(info);
+                if (ClientPackage.ReadInstalled(copy.Dir)?.Version != available.Version)
+                {
+                    Log($"Installing the Numidium client {available.Version}...");
+                    var packageProgress = new Progress<(int Done, int Total)>(p =>
+                    {
+                        CopyProgress.Maximum = Math.Max(1, p.Total);
+                        CopyProgress.Value = p.Done;
+                    });
+                    var installed = await Task.Run(() => ClientPackage.Install(copy.Dir, info, packageProgress));
+                    Log($"Numidium client {installed.Version} installed ({installed.Files.Count} files).");
+                }
+            }
         }
         catch (Exception ex)
         {

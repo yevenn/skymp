@@ -11,6 +11,12 @@ public sealed class LauncherSettings
     public int ServerPort { get; set; } = 7777;
     /// <summary>Only offline (dev) servers use it; real servers authenticate.</summary>
     public int? ProfileId { get; set; }
+    /// <summary>Folder holding numidium-client.json and its zip (package-client.ps1's output).
+    /// Until releases are published, a local folder.</summary>
+    public string? ClientPackageDir { get; set; }
+
+    public static string CacheDir =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Numidium", "Downloads");
 
     public static string DefaultPath =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Numidium", "launcher.json");
