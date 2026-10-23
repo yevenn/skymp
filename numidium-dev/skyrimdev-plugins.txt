@@ -34,3 +34,4 @@ CBBE.esp
 HIMBO.esp
 RaceMenuMorphsHIMBO.esp
 Sentinel - 3BA.esp
+evgnnsmpaccessories.esp
