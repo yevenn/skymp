@@ -274,6 +274,15 @@ const handleChat = (actorId, rawText) => {
   const args = spaceIndex === -1 ? '' : text.slice(spaceIndex + 1).trim();
 
   if (IGNORED_COMMANDS.has(name)) return;
+  if (name === 'double' && devCommandsEnabled()) {
+    toggleBodyDouble(actorId);
+    return;
+  }
+  // Reopens character creation (RaceMenu) for your existing character
+  if (name === 'racemenu' && devCommandsEnabled()) {
+    mp.setRaceMenuOpen(actorId, true);
+    return;
+  }
   if (name === 'help' || name === 'h') {
     for (const line of HELP_LINES) system(actorId, line);
     return;
@@ -298,6 +307,225 @@ const handleChat = (actorId, rawText) => {
     return;
   }
   command(actorId, args);
+};
+
+// ---------------------------------------------------------------------------
+// RaceMenu body sync
+// ---------------------------------------------------------------------------
+//
+// SkyMP syncs only the vanilla appearance. RaceMenu's body morphs (CBBE and
+// HIMBO sliders) and Body Scales (height, head, breasts, butt, biceps) live in
+// SKEE and the SKSE co-save, which SkyMP never loads, so they'd reset on relog
+// and other players would see default bodies.
+//
+//   RaceSex menu open --read every 250ms--> closes: ctx.sendEvent(last reading)
+//   --> mp._rpBodySave stores it as the actor's rpBody property
+//   --> updateOwner / updateNeighbor apply it on every client
+//
+// Scales are the bones' actual sizes, read and set with SKSE's NetImmerse, not
+// RaceMenu's NiOverride entries: NiOverride lookups by key fail after a few
+// calls through callNative (seemingly a reference count bug with strings the
+// game rarely uses, like RaceMenu's "RSMPlugin" key), while bone names are held
+// by every skeleton. Bone sizes reset when the model rebuilds (gear changes,
+// appearance updates), so clients check them every second and set them again.
+//
+// Face sculpting and overlays aren't synced yet. Morphs still go through
+// NiOverride and are untested in game (the female body has no morph sliders).
+
+const MAX_BODY_MORPHS = 400;
+const MAX_BODY_SCALES = 32;
+const MAX_BODY_NAME_LENGTH = 64;
+
+// The bones RaceMenu's Body Scales sliders change (RaceMenuPlugin.psc)
+const BODY_SCALE_NODES = [
+  'NPC', 'NPC Head [Head]',
+  'NPC L Breast', 'NPC R Breast', 'NPC L Breast01', 'NPC R Breast01',
+  'NPC L Butt', 'NPC R Butt',
+  'NPC L UpperarmTwist1 [LUt1]', 'NPC R UpperarmTwist1 [RUt1]',
+  'NPC L UpperarmTwist2 [LUt2]', 'NPC R UpperarmTwist2 [RUt2]',
+];
+
+// Runs in the game
+const BODY_APPLY_SRC = `
+  const applyMorphs = (sp, ref, body) => {
+    const call = (fn, ...args) => sp.callNative('NiOverride', fn, undefined, ...args);
+    call('ClearMorphs', ref);
+    for (const [name, key, value] of body.morphs) call('SetBodyMorph', ref, name, key, value);
+    call('UpdateModelWeight', ref);
+  };
+  // Sets the bones that aren't at their synced size, in third and first person
+  const applyScales = (sp, ref, body) => {
+    for (const scale of body.scales) {
+      const [node, value] = scale;
+      if (scale.length !== 2 || typeof value !== 'number') continue; // older format
+      const current = sp.NetImmerse.getNodeScale(ref, node, false);
+      if (!(current > 0) || Math.abs(current - value) < 0.001) continue;
+      sp.NetImmerse.setNodeScale(ref, node, value, false);
+      sp.NetImmerse.setNodeScale(ref, node, value, true);
+    }
+  };
+`;
+
+// The local player: restores the body after every login, since SkyMP loads a
+// fresh save without RaceMenu's data. Hands off while RaceMenu is open and
+// until the edited body comes back from the server, so the previous body
+// doesn't overwrite fresh edits.
+const BODY_UPDATE_OWNER = BODY_APPLY_SRC + `
+  const CHECK_MS = 1000;
+  const HOLD_AFTER_MENU_MS = 5000;
+  const body = ctx.value;
+  const state = ctx.state;
+  const now = Date.now();
+  if (!body || typeof body.v !== 'number' || !ctx.refr) return;
+  if (ctx.sp.Ui.isMenuOpen('RaceSex Menu')) {
+    state.rpBodyHoldUntil = now + HOLD_AFTER_MENU_MS;
+    return;
+  }
+  if (!ctx.refr.is3DLoaded()) return;
+  const isNew = state.rpBodyAppliedV !== body.v;
+  if (!isNew && (now < (state.rpBodyHoldUntil || 0) || now < (state.rpBodyCheckAt || 0))) return;
+  state.rpBodyCheckAt = now + CHECK_MS;
+  if (isNew) {
+    if (body.morphs.length || state.rpBodyHadMorphs) applyMorphs(ctx.sp, ctx.refr, body);
+    state.rpBodyHadMorphs = body.morphs.length > 0;
+    state.rpBodyAppliedV = body.v;
+    state.rpBodyHoldUntil = 0;
+  }
+  applyScales(ctx.sp, ctx.refr, body);
+`;
+
+// Other players near us: applied per version and per reference (a respawned
+// actor is a new reference), bone sizes checked every second
+const BODY_UPDATE_NEIGHBOR = BODY_APPLY_SRC + `
+  const CHECK_MS = 1000;
+  const body = ctx.value;
+  const state = ctx.state;
+  const now = Date.now();
+  if (!body || typeof body.v !== 'number' || !ctx.refr || !ctx.refr.is3DLoaded()) return;
+  const refId = ctx.refr.getFormID();
+  const isNew = state.rpBodyAppliedV !== body.v || state.rpBodyRef !== refId;
+  if (!isNew && now < (state.rpBodyCheckAt || 0)) return;
+  state.rpBodyCheckAt = now + CHECK_MS;
+  if (isNew) {
+    if (body.morphs.length) applyMorphs(ctx.sp, ctx.refr, body);
+    state.rpBodyAppliedV = body.v;
+    state.rpBodyRef = refId;
+  }
+  applyScales(ctx.sp, ctx.refr, body);
+`;
+
+// Runs once per client. Reads the player's body while RaceMenu is open and
+// sends the last reading when it closes: right after closing, SkyMP re-applies
+// the appearance and rebuilds the player, which resets the bone sizes.
+const BODY_EVENT_SOURCE = `
+  const NODES = ${JSON.stringify(BODY_SCALE_NODES)};
+  const SAMPLE_MS = 250;
+  let lastSample = null;
+  let nextSampleAt = 0;
+  let wasOpen = false;
+  const readBody = () => {
+    const call = (fn, ...args) => ctx.sp.callNative('NiOverride', fn, undefined, ...args);
+    const player = ctx.sp.Game.getPlayer();
+    const female = ctx.sp.ActorBase.from(player.getBaseObject()).getSex() === 1;
+    const morphs = [];
+    for (const name of call('GetMorphNames', player) || []) {
+      for (const key of call('GetMorphKeys', player, name) || []) {
+        const value = call('GetBodyMorph', player, name, key);
+        if (typeof value === 'number' && value !== 0) morphs.push([name, key, value]);
+      }
+    }
+    const scales = [];
+    for (const node of NODES) {
+      const value = ctx.sp.NetImmerse.getNodeScale(player, node, false);
+      if (value > 0) scales.push([node, value]);
+    }
+    return { female, morphs, scales };
+  };
+  ctx.sp.on('update', () => {
+    const open = ctx.sp.Ui.isMenuOpen('RaceSex Menu');
+    if (open && Date.now() >= nextSampleAt) {
+      nextSampleAt = Date.now() + SAMPLE_MS;
+      lastSample = readBody();
+    }
+    if (!open && wasOpen && lastSample) {
+      ctx.sendEvent(lastSample);
+      lastSample = null;
+    }
+    wasOpen = open;
+  });
+`;
+
+const isBodyName = (s) => typeof s === 'string' && s.length > 0 && s.length <= MAX_BODY_NAME_LENGTH;
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+// The client sends this, so treat it as untrusted: shapes, sizes and ranges
+const sanitizeBody = (data) => {
+  if (!data || typeof data !== 'object' || !Array.isArray(data.morphs) || !Array.isArray(data.scales)) return null;
+  const morphs = data.morphs
+    .filter((m) => Array.isArray(m) && isBodyName(m[0]) && isBodyName(m[1]) && Number.isFinite(m[2]))
+    .slice(0, MAX_BODY_MORPHS)
+    .map(([name, key, value]) => [name, key, clamp(value, -10, 10)]);
+  const scales = data.scales
+    .filter((s) => Array.isArray(s) && BODY_SCALE_NODES.includes(s[0]) && Number.isFinite(s[1]))
+    .slice(0, MAX_BODY_SCALES)
+    .map(([node, scale]) => [node, clamp(scale, 0.1, 10)]);
+  return { female: data.female === true, morphs, scales };
+};
+
+const saveBody = (actorId, body) => {
+  const current = mp.get(actorId, 'rpBody');
+  const v = current && typeof current.v === 'number' ? current.v + 1 : 1;
+  mp.set(actorId, 'rpBody', { v, female: body.female, morphs: body.morphs, scales: body.scales });
+};
+
+// Dev-only (enableConsoleCommandsForAll): a copy of your character next to you
+// carrying your synced body, to see what other players see without a second game
+const bodyDoubles = new Map();
+
+// Doubles are saved with the world like any actor, and this map is lost when the
+// gamemode reloads, so they're tagged with a profile id no player has and
+// cleaned up on load
+const BODY_DOUBLE_PROFILE_ID = 0x7ffffff0;
+const removeLeftoverBodyDoubles = () => {
+  let removed = 0;
+  // The profile index keeps ids of doubles already destroyed, so some throw
+  for (const id of mp.getActorsByProfileId(BODY_DOUBLE_PROFILE_ID)) {
+    try {
+      mp.destroyActor(id);
+      removed++;
+    } catch (e) {
+      // already gone
+    }
+  }
+  if (removed) console.log(`[body] removed ${removed} leftover body double(s)`);
+};
+
+const devCommandsEnabled = () => mp.getServerSettings().enableConsoleCommandsForAll === true;
+
+const toggleBodyDouble = (actorId) => {
+  const existing = bodyDoubles.get(actorId);
+  if (existing) {
+    mp.destroyActor(existing);
+    bodyDoubles.delete(actorId);
+    system(actorId, 'Body double removed.');
+    return;
+  }
+  const [x, y, z] = mp.getActorPos(actorId);
+  const angle = mp.get(actorId, 'angle');
+  const angleZ = Array.isArray(angle) ? angle[2] : 0;
+  const rad = (angleZ * Math.PI) / 180;
+  const pos = [x + Math.sin(rad) * 150, y + Math.cos(rad) * 150, z];
+  const doubleId = mp.createActor(0, pos, angleZ + 180, mp.getActorCellOrWorld(actorId), BODY_DOUBLE_PROFILE_ID);
+  mp.set(doubleId, 'appearance', mp.get(actorId, 'appearance'));
+  const body = mp.get(actorId, 'rpBody');
+  if (body) mp.set(doubleId, 'rpBody', body);
+  // createActor doesn't put the actor on the streaming grid, so nobody would see it
+  // until it moves; teleporting it in place does
+  mp.set(doubleId, 'locationalData', mp.get(doubleId, 'locationalData'));
+  bodyDoubles.set(actorId, doubleId);
+  system(actorId, body
+    ? `Body double spawned with your synced body (${body.morphs.length} morphs, ${body.scales.length} bones). /double again removes it.`
+    : 'Body double spawned, but you have no synced body yet: open and close RaceMenu first.');
 };
 
 mp.makeProperty('rpChat', {
@@ -326,4 +554,34 @@ mp._rpChatJoin = (actorId) => {
   }
 };
 
-console.log('[numidium] gamemode loaded: roleplay chat');
+mp.makeProperty('rpBody', {
+  isVisibleByOwner: true,
+  isVisibleByNeighbors: true,
+  updateOwner: BODY_UPDATE_OWNER,
+  updateNeighbor: BODY_UPDATE_NEIGHBOR,
+});
+
+mp.makeEventSource('_rpBodySave', BODY_EVENT_SOURCE);
+
+mp._rpBodySave = (actorId, data) => {
+  try {
+    const body = sanitizeBody(data);
+    if (!body) {
+      console.log(`[body] ignored malformed body from ${actorId.toString(16)}`);
+      return;
+    }
+    saveBody(actorId, body);
+    const changed = body.scales.filter(([, scale]) => Math.abs(scale - 1) >= 0.005)
+      .map(([node, scale]) => `${node} ${scale.toFixed(2)}`);
+    console.log(`[body] ${getName(actorId)} (${actorId.toString(16)}): ${body.morphs.length} morphs, `
+      + `${body.scales.length} bones${changed.length ? ` (${changed.join(', ')})` : ''}`);
+    const doubleId = bodyDoubles.get(actorId);
+    if (doubleId) saveBody(doubleId, body);
+  } catch (e) {
+    console.error('[body] failed to save body', e);
+  }
+};
+
+removeLeftoverBodyDoubles();
+
+console.log('[numidium] gamemode loaded: roleplay chat, RaceMenu body sync');
