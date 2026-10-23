@@ -12,6 +12,23 @@
  * Send Event hook
  */
 
+namespace {
+// RaceMenu adds its script sliders (Body Scales, body morph mods like HIMBO)
+// from quest scripts that extend RaceMenuBase, they need their events
+bool IsRaceMenuScript(const RE::BSScript::ObjectTypeInfo* info)
+{
+  if (!_strnicmp(info->GetName(), "RaceMenu", 8)) {
+    return true;
+  }
+  for (auto parent = info->GetParent(); parent; parent = parent->GetParent()) {
+    if (!stricmp(parent->GetName(), "RaceMenuBase")) {
+      return true;
+    }
+  }
+  return false;
+}
+}
+
 // (VMHandle handle, const BSFixedString& eventName, IFunctionArguments* args)
 void OnSendEventEnter(GumInvocationContext* ic)
 {
@@ -61,6 +78,9 @@ void OnSendEventEnter(GumInvocationContext* ic)
           break;
         } else if (!stricmp(name, "defaultDisableHavokOnLoad")) {
           // Maybe worth unblocking events only for this script, not for all
+          blockEvents = false;
+          break;
+        } else if (IsRaceMenuScript(info)) {
           blockEvents = false;
           break;
         }
