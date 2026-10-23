@@ -14,6 +14,16 @@ public sealed class LauncherSettings
     /// <summary>Folder holding numidium-client.json and its zip (package-client.ps1's output).
     /// Until releases are published, a local folder.</summary>
     public string? ClientPackageDir { get; set; }
+    /// <summary>Where the player's browser saves Nexus downloads.</summary>
+    public string? DownloadsDir { get; set; }
+
+    /// <summary>A client package shipped in a numidium-client folder beside the launcher,
+    /// or null. Used when no package folder has been picked.</summary>
+    public static string? BundledPackageDir(string? launcherDir = null)
+    {
+        var dir = Path.Combine(launcherDir ?? AppContext.BaseDirectory, "numidium-client");
+        return File.Exists(Path.Combine(dir, ClientPackage.InfoFile)) ? dir : null;
+    }
 
     public static string CacheDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Numidium", "Downloads");

@@ -1,0 +1,12 @@
+// What the Numidium collection's collection.json can't say. package-client.ps1
+// puts this next to the client package; the launcher reads both.
+// A rule applies to one Nexus file (fileId) or to all files of a mod (no fileId).
+{
+  "mods": [
+    // The launcher installs SKSE itself, from its official site
+    { "modId": 30379, "name": "Skyrim Script Extender (SKSE64)", "skip": true },
+    // A DLL loaded before SKSE: goes beside SkyrimSE.exe, not in Data. The main
+    // Engine Fixes file (same mod) installs normally through its FOMOD
+    { "modId": 17230, "fileId": 725261, "name": "Engine Fixes - SKSE64 Preloader", "target": "game" }
+  ]
+}

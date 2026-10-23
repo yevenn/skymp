@@ -2,10 +2,15 @@
 # SKSE plugins and scripts) from the build for the launcher to install:
 #   build\numidium-client\numidium-client-<version>.zip
 #   build\numidium-client\numidium-client.json   (version, file, size, sha256)
+#   build\numidium-client\numidium-modlist.json  (from numidium-dev)
+#   build\numidium-client\collection.json        (numidium-dev\collection.json, or with -Collection the
+#                                                 Nexus collection's archive as Vortex exports or
+#                                                 downloads it, or another collection.json)
 # SKSE is not included: the launcher fetches it from its own site.
 param(
-  [string]$Repo    = (Split-Path $PSScriptRoot -Parent),
-  [string]$Version = ""
+  [string]$Repo       = (Split-Path $PSScriptRoot -Parent),
+  [string]$Version    = "",
+  [string]$Collection = ""
 )
 $ErrorActionPreference = "Stop"
 Add-Type -AssemblyName System.IO.Compression, System.IO.Compression.FileSystem
@@ -14,10 +19,13 @@ $source = Join-Path $Repo "build\dist\client"
 $outDir = Join-Path $Repo "build\numidium-client"
 if (-not (Test-Path (Join-Path $source "Data\SKSE\Plugins\SkyrimPlatform.dll"))) { throw "No client build in $source" }
 
+# Version: date and commit. With uncommitted changes the package's own checksum is
+# added once it's built, since the launcher reinstalls only when the version changes
+$dirty = $false
 if (-not $Version) {
   $sha = (& git -C $Repo rev-parse --short HEAD).Trim()
-  $dirty = if (& git -C $Repo status --porcelain) { "-dirty" } else { "" }
-  $Version = (Get-Date -Format "yyyy.MM.dd") + "-$sha$dirty"
+  $dirty = [bool](& git -C $Repo status --porcelain)
+  $Version = (Get-Date -Format "yyyy.MM.dd") + "-$sha"
 }
 
 # Developer files, per-player settings, and Address Library for game versions we don't run on
@@ -33,22 +41,57 @@ $files = Get-ChildItem $source -Recurse -File | ForEach-Object { $_.FullName.Sub
 } | Sort-Object
 
 New-Item -ItemType Directory -Force $outDir | Out-Null
-$zipName = "numidium-client-$Version.zip"
-$zipPath = Join-Path $outDir $zipName
+Get-ChildItem $outDir -Filter "numidium-client-*.zip" | Remove-Item
+$zipPath = Join-Path $outDir "numidium-client.zip.tmp"
 if (Test-Path $zipPath) { Remove-Item $zipPath }
+# Our files from numidium-dev that go into the game copy too
+$extra = @{
+  "Data\CalienteTools\BodySlide\SliderGroups\Numidium.xml" = (Join-Path $PSScriptRoot "bodyslide\Numidium.xml")
+}
+
 $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
   foreach ($rel in $files) {
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, (Join-Path $source $rel), $rel.Replace('\', '/'),
       [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
   }
+  foreach ($rel in $extra.Keys) {
+    [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $extra[$rel], $rel.Replace('\', '/'),
+      [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
+  }
 } finally { $zip.Dispose() }
+
+$hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($dirty) { $Version += "-dirty-" + $hash.Substring(0, 8) }
+$zipName = "numidium-client-$Version.zip"
+Move-Item $zipPath (Join-Path $outDir $zipName)
+$zipPath = Join-Path $outDir $zipName
 
 $info = [ordered]@{
   version = $Version
   file    = $zipName
   size    = (Get-Item $zipPath).Length
-  sha256  = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
+  sha256  = $hash
 }
 [IO.File]::WriteAllText((Join-Path $outDir "numidium-client.json"), ($info | ConvertTo-Json), (New-Object Text.UTF8Encoding $false))
-Write-Host ("{0}: {1} files, {2:n0} MB" -f $zipName, $files.Count, ($info.size / 1MB))
+Write-Host ("{0}: {1} files, {2:n0} MB" -f $zipName, ($files.Count + $extra.Count), ($info.size / 1MB))
+
+Copy-Item (Join-Path $PSScriptRoot "numidium-modlist.json") $outDir -Force
+if (-not $Collection) { $Collection = Join-Path $PSScriptRoot "collection.json" }
+if (Test-Path $Collection) {
+  $target = Join-Path $outDir "collection.json"
+  if ($Collection -like "*.json") {
+    Copy-Item $Collection $target -Force
+  } else {
+    # The collection archive Vortex downloads (collection_<slug>_<revision>_<date>.7z)
+    $temp = Join-Path ([IO.Path]::GetTempPath()) ("numidium-collection-" + [guid]::NewGuid())
+    New-Item -ItemType Directory $temp | Out-Null
+    try {
+      tar -xf $Collection -C $temp collection.json
+      if ($LASTEXITCODE -ne 0) { throw "No collection.json in $Collection" }
+      Copy-Item (Join-Path $temp "collection.json") $target -Force
+    } finally { Remove-Item $temp -Recurse -Force }
+  }
+  $mods = (Get-Content $target -Raw | ConvertFrom-Json).mods.Count
+  Write-Host "collection.json: $mods mods"
+}

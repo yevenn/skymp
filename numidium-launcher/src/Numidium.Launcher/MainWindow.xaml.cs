@@ -21,13 +21,169 @@ public partial class MainWindow : Window
         InitializeComponent();
         settings.SteamGameDir ??= SteamSkyrim.Find();
         settings.GameDir ??= LauncherSettings.SuggestGameDir(settings.SteamGameDir);
+        settings.ClientPackageDir ??= LauncherSettings.BundledPackageDir();
         SteamDirBox.Text = settings.SteamGameDir ?? "";
         GameDirBox.Text = settings.GameDir;
         HostBox.Text = settings.ServerHost;
         PortBox.Text = settings.ServerPort.ToString();
         ProfileBox.Text = settings.ProfileId?.ToString() ?? "";
         PackageDirBox.Text = settings.ClientPackageDir ?? "";
+        DownloadsDirBox.Text = DownloadsDir;
         RefreshStatus();
+        Loaded += async (_, _) => await RefreshModsAsync();
+    }
+
+    private Collection? collection;
+    private ModList modList = new();
+    private readonly Dictionary<string, string> hashCache = new();
+    private List<ModRow> modRows = new();
+
+    private string DownloadsDir => settings.DownloadsDir ?? Downloads.DefaultFolder;
+
+    private string? CollectionPath =>
+        settings.ClientPackageDir is string dir && File.Exists(Path.Combine(dir, Collection.FileName))
+            ? Path.Combine(dir, Collection.FileName)
+            : null;
+
+    /// <summary>Reloads the collection and modlist from the client package folder and
+    /// rescans the Downloads folder (hashing only files of a wanted size).</summary>
+    private async Task RefreshModsAsync()
+    {
+        try
+        {
+            if (CollectionPath is not string path)
+            {
+                collection = null;
+                modRows = new();
+                ModsList.ItemsSource = null;
+                ModsHeading.Text = "MODS";
+                ModsStatus.Text = $"The client package folder has no {Collection.FileName} yet.";
+                InstallModsButton.IsEnabled = false;
+                return;
+            }
+            collection = Collection.Load(path);
+            modList = ModList.Load(Path.Combine(Path.GetDirectoryName(path)!, ModList.FileName));
+            ModsStatus.Text = "Looking for downloads...";
+            var mods = collection.Mods;
+            var folders = new[] { DownloadsDir, LauncherSettings.CacheDir };
+            var found = await Task.Run(() => Downloads.Find(mods, folders, hashCache));
+            ShowMods(found);
+        }
+        catch (Exception ex)
+        {
+            ModsStatus.Text = $"Couldn't read the collection: {ex.Message}";
+        }
+    }
+
+    private void ShowMods(Dictionary<Collection.Mod, string> found)
+    {
+        if (collection == null) return;
+        var records = ModInstaller.ReadRecords(settings.GameDir!);
+        modRows = collection.Mods.Select(mod =>
+        {
+            if (modList.RuleFor(mod)?.Skip == true) return new ModRow(mod, ModRow.State.ByLauncher, null);
+            if (records.ContainsKey(mod.FileId)) return new ModRow(mod, ModRow.State.Installed, null);
+            return found.TryGetValue(mod, out var archive)
+                ? new ModRow(mod, ModRow.State.Downloaded, archive)
+                : new ModRow(mod, ModRow.State.Missing, null);
+        }).ToList();
+        ModsList.ItemsSource = modRows;
+        ModsHeading.Text = $"MODS · {collection.Name.ToUpperInvariant()}";
+        int Count(ModRow.State s) => modRows.Count(r => r.Status_ == s);
+        var missing = modRows.Count(r => r.Status_ == ModRow.State.Missing && !r.Mod.Optional);
+        ModsStatus.Text = $"{Count(ModRow.State.Installed)} installed, {Count(ModRow.State.Downloaded)} ready to install, " +
+                          (missing > 0 ? $"{missing} still to download." : "nothing left to download.");
+        InstallModsButton.IsEnabled = !busy && (Count(ModRow.State.Downloaded) > 0);
+    }
+
+    private async void RefreshMods_Click(object sender, RoutedEventArgs e) => await RefreshModsAsync();
+
+    private async void BrowseDownloads_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFolderDialog { Title = "Where your browser saves downloads" };
+        if (dialog.ShowDialog(this) != true) return;
+        settings.DownloadsDir = dialog.FolderName;
+        DownloadsDirBox.Text = dialog.FolderName;
+        settings.Save();
+        await RefreshModsAsync();
+    }
+
+    private void OpenOnNexus_Click(object sender, RoutedEventArgs e)
+    {
+        if ((sender as FrameworkElement)?.Tag is string url && url.StartsWith("https://www.nexusmods.com/"))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(url) { UseShellExecute = true });
+    }
+
+    private async void InstallMods_Click(object sender, RoutedEventArgs e)
+    {
+        if (collection == null) return;
+        var copy = new GameCopy(settings.GameDir!);
+        if (!copy.Exists)
+        {
+            Log("Set up the Numidium game folder first.");
+            return;
+        }
+        busy = true;
+        RefreshStatus();
+        InstallModsButton.IsEnabled = false;
+        try
+        {
+            var current = collection;
+            foreach (var removed in await Task.Run(() => ModInstaller.RemoveUnlisted(copy.Dir, current)))
+                Log($"Removed {removed.Name} ({removed.Files.Count} files), no longer in the collection.");
+
+            // In install order: a mod that must win over another overwrites it
+            var items = modRows.Where(r => r.Status_ == ModRow.State.Downloaded)
+                .Select(r => new ModInstaller.InstallItem(r.Mod, r.ArchivePath!, modList.RuleFor(r.Mod))).ToList();
+            var parallelism = ModInstaller.DefaultParallelism;
+            Log($"Unpacking {items.Count} mods, {parallelism} at a time...");
+            var started = DateTime.Now;
+            var progress = new Progress<string>(Log);
+            var results = await Task.Run(() => ModInstaller.InstallAll(copy.Dir, items, parallelism, ((IProgress<string>)progress).Report));
+            foreach (var (item, installed, error) in results)
+            {
+                if (error != null) Log($"Failed: {item.Mod.Name}: {error.Message}");
+            }
+            var files = results.Sum(r => r.Installed?.Files.Count ?? 0);
+            Log($"Installed {results.Count(r => r.Installed != null)} of {items.Count} mods ({files} files) " +
+                $"in {(DateTime.Now - started).TotalMinutes:F1} minutes.");
+            await AfterInstallAsync(copy.Dir);
+        }
+        finally
+        {
+            busy = false;
+            RefreshStatus();
+            await RefreshModsAsync();
+        }
+    }
+
+    /// <summary>What installed mods need before playing: RaceMenu's height limit,
+    /// and building bodies and outfits when the mods or groups changed.</summary>
+    private async Task AfterInstallAsync(string gameDir)
+    {
+        try
+        {
+            if (await Task.Run(() => HeightPatch.Apply(gameDir)))
+                Log($"RaceMenu's Height slider limited to {HeightPatch.Min:0.00}-{HeightPatch.Max:0.00}.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Couldn't limit RaceMenu's Height slider: {ex.Message}");
+        }
+
+        if (!Bodies.CanBuild(gameDir) || Bodies.IsUpToDate(gameDir)) return;
+        try
+        {
+            Log("Building bodies and outfits with BodySlide; this takes a few minutes...");
+            var progress = new Progress<string>(Log);
+            var started = DateTime.Now;
+            await Task.Run(() => Bodies.BuildAsync(gameDir, ((IProgress<string>)progress).Report));
+            Log($"Built in {(DateTime.Now - started).TotalMinutes:F1} minutes.");
+        }
+        catch (Exception ex)
+        {
+            Log($"Building bodies failed: {ex.Message}");
+        }
     }
 
     private string? PackageInfoPath =>
@@ -113,7 +269,7 @@ public partial class MainWindow : Window
         GameDirBox_LostFocus(sender, e);
     }
 
-    private void BrowsePackage_Click(object sender, RoutedEventArgs e)
+    private async void BrowsePackage_Click(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFolderDialog { Title = "Folder with numidium-client.json" };
         if (dialog.ShowDialog(this) != true) return;
@@ -126,6 +282,7 @@ public partial class MainWindow : Window
         PackageDirBox.Text = dialog.FolderName;
         settings.Save();
         RefreshStatus();
+        await RefreshModsAsync();
     }
 
     private void GameDirBox_LostFocus(object sender, RoutedEventArgs e)
@@ -134,6 +291,7 @@ public partial class MainWindow : Window
         settings.GameDir = GameDirBox.Text.Trim();
         settings.Save();
         RefreshStatus();
+        _ = RefreshModsAsync();
     }
 
     private async void Copy_Click(object sender, RoutedEventArgs e)
@@ -184,6 +342,8 @@ public partial class MainWindow : Window
                     Log($"Numidium client {installed.Version} installed ({installed.Files.Count} files).");
                 }
             }
+            // The client package carries the body groups, so a new one can mean a rebuild
+            await AfterInstallAsync(copy.Dir);
         }
         catch (Exception ex)
         {

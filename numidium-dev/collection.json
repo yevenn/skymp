@@ -1,0 +1,2677 @@
+{
+  "info": {
+    "author": "MsHyeven",
+    "authorUrl": "",
+    "name": "Numidium RP",
+    "description": "",
+    "installInstructions": "DO NOT INSTALL THIS COLLECTION THROUGH VORTEX, DOWNLOAD EACH MODS MANUALLY AND LET NUMIDIUM'S LAUNCHER HANDLE INSTALLATION!",
+    "domainName": "skyrimspecialedition",
+    "gameVersions": [
+      "1.6.1170.0"
+    ]
+  },
+  "mods": [
+    {
+      "name": "1K Assets",
+      "version": ".99",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 5063,
+        "fileId": 10870,
+        "md5": "53de97bbb522cdf3433b17d269651dab",
+        "fileSize": 213232333,
+        "logicalFilename": "1K Assets",
+        "updatePolicy": "exact",
+        "tag": "zicvZaouAR"
+      },
+      "author": "FranklinZunge",
+      "details": {
+        "category": "Clothing and Accessories",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Actor Limit Fix - Anniversary Edition (1.6.629.0 and later)",
+      "version": "9",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 32349,
+        "fileId": 368385,
+        "md5": "64a26c3b46775bce82f78d3a7bb389e3",
+        "fileSize": 1851769,
+        "logicalFilename": "Actor Limit Fix - Anniversary Edition (1.6.629.0 and later)",
+        "updatePolicy": "exact",
+        "tag": "Pb-6skPjwn"
+      },
+      "author": "meh321",
+      "details": {
+        "category": "Bug Fixes",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Address Library - All in one (all game versions)",
+      "version": "11",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 32444,
+        "fileId": 720756,
+        "md5": "7dfa9fe646185b06ecddd3493c28c415",
+        "fileSize": 5302930,
+        "logicalFilename": "Address Library - All in one (all game versions)",
+        "updatePolicy": "exact",
+        "tag": "qfWja6zUwS"
+      },
+      "author": "meh321",
+      "details": {
+        "category": "Modders Resources",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Animation Queue Fix",
+      "version": "1.0.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 82395,
+        "fileId": 348271,
+        "md5": "9584ad553ee5cb9eba21adabadbbc829",
+        "fileSize": 128700,
+        "logicalFilename": "Animation Queue Fix",
+        "updatePolicy": "exact",
+        "tag": "rrLpv4S-_2"
+      },
+      "author": "Ersh",
+      "details": {
+        "category": "Bug Fixes",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Arena - Markarth Side",
+      "version": "1.8",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 114252,
+        "fileId": 721874,
+        "md5": "74103bb107149ece496e6bf836d90273",
+        "fileSize": 54425201,
+        "logicalFilename": "Arena - Markarth Side",
+        "updatePolicy": "exact",
+        "tag": "WmC9ypHhz8"
+      },
+      "author": "Skyking2020",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "New Legion - Base",
+      "version": "1.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 30468,
+        "fileId": 113850,
+        "md5": "65bd471667c8aa2e06230914e525b882",
+        "fileSize": 15570899,
+        "logicalFilename": "Base",
+        "updatePolicy": "exact",
+        "tag": "0H5s2Mp6S6"
+      },
+      "author": "NordwarUA",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Capital Windhelm Expansion 1.3 - Normal",
+      "version": "1.3",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 42990,
+        "fileId": 188036,
+        "md5": "80f542ccf224dbcccd3d8c2d9b160471",
+        "fileSize": 85939848,
+        "logicalFilename": "Capital Windhelm Expansion 1.3 - Normal",
+        "updatePolicy": "exact",
+        "tag": "AgBJWXv5r6"
+      },
+      "author": "Surjamte",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Cheddar's Mashups V1.8.8",
+      "version": "1.8.8",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 182534,
+        "fileId": 809278,
+        "md5": "1822bb7c6ede5c44974353950981f6a4",
+        "fileSize": 353058360,
+        "logicalFilename": "Cheddar's Mashups V1.8.8",
+        "updatePolicy": "exact",
+        "tag": "GJFrOniMmG"
+      },
+      "author": "CheddarBread",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Cheddars Mashups Keizaal V1.1",
+      "version": "1.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 182534,
+        "fileId": 810771,
+        "md5": "a824577cda93e01125f208b380511a75",
+        "fileSize": 158960,
+        "logicalFilename": "Cheddars Mashups Keizaal V1.1",
+        "updatePolicy": "exact",
+        "tag": "aqsfRTlyBV"
+      },
+      "author": "CheddarBread",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Cloaks and Capes",
+      "version": "1.4",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 2019,
+        "fileId": 35552,
+        "md5": "0853b94a9deefedce06a85542423840a",
+        "fileSize": 45920738,
+        "logicalFilename": "Cloaks and Capes",
+        "updatePolicy": "exact",
+        "tag": "scbELs9dZB"
+      },
+      "author": "volvaga0",
+      "details": {
+        "category": "Clothing and Accessories",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Common Clothing Expansion",
+      "version": "1.7",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 134088,
+        "fileId": 574611,
+        "md5": "44cc25f2c49a5e88b35c64a275ac229f",
+        "fileSize": 87719291,
+        "logicalFilename": "Common Clothing Expansion",
+        "updatePolicy": "exact",
+        "tag": "kW22Gx7Vra"
+      },
+      "author": "Horn",
+      "details": {
+        "category": "Clothing and Accessories",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Constructible Object Custom Keyword System - Crafting Categories for SkyUI",
+      "version": "1.1.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 81409,
+        "fileId": 493920,
+        "md5": "db0abc28f20a03056945dab99a8c89a3",
+        "fileSize": 2503691,
+        "logicalFilename": "Crafting Categories for SkyUI",
+        "updatePolicy": "exact",
+        "tag": "COyJMReLC2"
+      },
+      "author": "Parapets",
+      "details": {
+        "category": "User Interface",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "CrashLogger",
+      "version": "1.20.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 59818,
+        "fileId": 720311,
+        "md5": "dc99f53f411b874b1c748afd9294cbb5",
+        "fileSize": 7269215,
+        "logicalFilename": "CrashLogger",
+        "updatePolicy": "exact",
+        "tag": "5rDrANk-me"
+      },
+      "author": "alandtse",
+      "details": {
+        "category": "Miscellaneous",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Common Clothes (by FranklinZunge for SSE) - ESP --- NPC Level List Distribution and Armor Craftable",
+      "version": ".99",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 5063,
+        "fileId": 160449,
+        "md5": "231883e8591ff584ccc2da6ef5381fdd",
+        "fileSize": 7174,
+        "logicalFilename": "ESP --- NPC Level List Distribution and Armor Craftable",
+        "updatePolicy": "exact",
+        "tag": "h-vPRKzMjL"
+      },
+      "author": "FranklinZunge",
+      "details": {
+        "category": "Clothing and Accessories",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Engine Fixes - Main File",
+      "version": "7.0.20",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 17230,
+        "fileId": 725753,
+        "md5": "6560abfcfa947262b015a96ad19ffaf1",
+        "fileSize": 7973497,
+        "logicalFilename": "Engine Fixes - Main File",
+        "updatePolicy": "exact",
+        "tag": "-7MlUCsOPi"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Main",
+            "groups": [
+              {
+                "name": "DLL",
+                "choices": [
+                  {
+                    "name": "SSE v1.6.1170 (\"Anniversary Edition\")",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "aers - Nukem - Ryan",
+      "details": {
+        "category": "Bug Fixes",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Engine Fixes - SKSE64 Preloader",
+      "version": "7",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 17230,
+        "fileId": 725261,
+        "md5": "e8cb73861ead2bc8966b295bfeb3363b",
+        "fileSize": 25080,
+        "logicalFilename": "Engine Fixes - SKSE64 Preloader",
+        "updatePolicy": "exact",
+        "tag": "LGY5mz3vIln"
+      },
+      "author": "aers - Nukem - Ryan",
+      "details": {
+        "category": "Bug Fixes",
+        "type": "dinput"
+      },
+      "phase": 0
+    },
+    {
+      "name": "Granite Hill",
+      "version": "6.7.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 14658,
+        "fileId": 691084,
+        "md5": "21878bb26fadd63b740cfbf342983e32",
+        "fileSize": 13341294,
+        "logicalFilename": "Granite Hill",
+        "updatePolicy": "exact",
+        "tag": "nxS7zbti8PE"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Step1",
+            "groups": [
+              {
+                "name": "Playthrough Style",
+                "choices": [
+                  {
+                    "name": "Non-Dragonborn",
+                    "idx": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Step2",
+            "groups": [
+              {
+                "name": "Install Lux Patch?",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Step3",
+            "groups": [
+              {
+                "name": "Install Lux Patch?",
+                "choices": [
+                  {
+                    "name": "No",
+                    "idx": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Skyking2020",
+      "details": {
+        "category": "Locations -  New",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "JK&#39;s Riverwood V1.3d - SSE",
+      "version": "1.3d",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 2013,
+        "fileId": 24738,
+        "md5": "f6baf7f59666518e44cff15df04caed4",
+        "fileSize": 96823,
+        "logicalFilename": "JK&#39;s Riverwood V1.3d - SSE",
+        "updatePolicy": "exact",
+        "tag": "hCfzSzCBcBX"
+      },
+      "author": "JKrojmal",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "JK's Whiterun Outskirts",
+      "version": "1.6.2",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 78351,
+        "fileId": 652546,
+        "md5": "c8994ef87c174316abb1fd554cba1073",
+        "fileSize": 3211063,
+        "logicalFilename": "JK's Whiterun Outskirts",
+        "updatePolicy": "exact",
+        "tag": "ab3LjXAIx8m"
+      },
+      "author": "Jkrojmal",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "JK&#39;s Whiterun V1.4b - SSE",
+      "version": "1.4b",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 2259,
+        "fileId": 24737,
+        "md5": "5862a79d235c6ee827c1e052be8a1f0f",
+        "fileSize": 79526,
+        "logicalFilename": "JK&#39;s Whiterun V1.4b - SSE",
+        "updatePolicy": "exact",
+        "tag": "zixdyK_yuwi"
+      },
+      "author": "JKrojmal",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "MCM Helper",
+      "version": "1.6.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 53000,
+        "fileId": 739516,
+        "md5": "d91c491d85ad78afea899d686e623d1a",
+        "fileSize": 8236114,
+        "logicalFilename": "MCM Helper",
+        "updatePolicy": "exact",
+        "tag": "UawSYQ73t17"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Game Version",
+            "groups": [
+              {
+                "name": "Game Version",
+                "choices": [
+                  {
+                    "name": "Skyrim Special Edition",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Mod Files",
+            "groups": [
+              {
+                "name": "Plugin",
+                "choices": [
+                  {
+                    "name": "ESP",
+                    "idx": 0
+                  }
+                ]
+              },
+              {
+                "name": "Resources",
+                "choices": [
+                  {
+                    "name": "BSA",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Parapets",
+      "details": {
+        "category": "Utilities",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Mage Clothing Expansion",
+      "version": "2.0.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 128173,
+        "fileId": 545408,
+        "md5": "016ad2fb5a9e7dba3661aee7dd82a389",
+        "fileSize": 342956829,
+        "logicalFilename": "Mage Clothing Expansion",
+        "updatePolicy": "exact",
+        "tag": "RLbLeYQHGNb"
+      },
+      "author": "Horn",
+      "details": {
+        "category": "Clothing and Accessories",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Moon Monk's Robes - 2K",
+      "version": "1.2",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 82495,
+        "fileId": 563342,
+        "md5": "73e125aae3ec31118eae5e0d517513c5",
+        "fileSize": 144285442,
+        "logicalFilename": "Moon Monk's Robes - 2K",
+        "updatePolicy": "exact",
+        "tag": "aDYVcbrgl-O"
+      },
+      "author": "Kadraeus",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "More Craftable Equipment",
+      "version": "1.4.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 44666,
+        "fileId": 363683,
+        "md5": "129ca334ad2164b8c5fd8ecef191dc41",
+        "fileSize": 57745716,
+        "logicalFilename": "More Craftable Equipment",
+        "updatePolicy": "exact",
+        "tag": "VRr7QYzh3Ef"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Optional",
+            "groups": [
+              {
+                "name": "Hearthfire Add-on",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Creation Club",
+            "groups": [
+              {
+                "name": "Creation Club",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Patches (1)",
+            "groups": [
+              {
+                "name": "USSEP etc.",
+                "choices": [
+                  {
+                    "name": "None",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Patches (2)",
+            "groups": [
+              {
+                "name": "Patches",
+                "choices": [
+                  {
+                    "name": "Cloaks and Capes",
+                    "idx": 4
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Parapets",
+      "details": {
+        "category": "Crafting",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Native EditorID Fix",
+      "version": "1.2.2",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 85260,
+        "fileId": 488800,
+        "md5": "ec397d77930ccdacee32138ef1f267a9",
+        "fileSize": 109716,
+        "logicalFilename": "Native EditorID Fix",
+        "updatePolicy": "exact",
+        "tag": "UtbaRz2-Emg"
+      },
+      "author": "Kitsuune",
+      "details": {
+        "category": "Bug Fixes",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Nemesis Unlimited Behavior Engine",
+      "version": "v0.84-beta",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 60033,
+        "fileId": 248867,
+        "md5": "a3d069d01333a8cdd09ddf669044ce76",
+        "fileSize": 26127652,
+        "logicalFilename": "Nemesis Unlimited Behavior Engine",
+        "updatePolicy": "exact",
+        "tag": "i5cF3TCWsAD"
+      },
+      "author": "Shikyo Kira",
+      "details": {
+        "category": "Animation",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Nirn Necessities - SE by Xtudo - 2K textures",
+      "version": "1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 133857,
+        "fileId": 561939,
+        "md5": "19a04d137f96f873a52993f3715d3e9b",
+        "fileSize": 106749990,
+        "logicalFilename": "Nirn Necessities - SE by Xtudo - 2K textures",
+        "updatePolicy": "exact",
+        "tag": "4XuKLSMWczz"
+      },
+      "author": "Author Everglaid - My patches by Xtudo",
+      "details": {
+        "category": "Miscellaneous",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Nirn Necessities - SE by Xtudo - Non-HDT patch",
+      "version": "1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 133857,
+        "fileId": 561937,
+        "md5": "189b4b0ac81d8db50a94f313e306bd3d",
+        "fileSize": 5189781,
+        "logicalFilename": "Nirn Necessities - SE by Xtudo - Non-HDT patch",
+        "updatePolicy": "exact",
+        "tag": "PgCLuIAy8_8"
+      },
+      "author": "Author Everglaid - My patches by Xtudo",
+      "details": {
+        "category": "Miscellaneous",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Nirn Necessities - SMP Accessories",
+      "version": "1.03",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 112481,
+        "fileId": 563435,
+        "md5": "610c9428ce0c77810c4401171f3b6e02",
+        "fileSize": 208230990,
+        "logicalFilename": "Nirn Necessities - SMP Accessories",
+        "updatePolicy": "exact",
+        "tag": "Sz-L_8H_0mo"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Options",
+            "groups": [
+              {
+                "name": "Core Files",
+                "choices": [
+                  {
+                    "name": "Install",
+                    "idx": 0
+                  }
+                ]
+              },
+              {
+                "name": "Light Emitting",
+                "choices": []
+              },
+              {
+                "name": "More SPID",
+                "choices": []
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Everglaid",
+      "details": {
+        "category": "Clothing and Accessories",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Northkeep",
+      "version": "1.00.2",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 165638,
+        "fileId": 708964,
+        "md5": "fa384a74dff849252b09020af1afcc4c",
+        "fileSize": 17116826,
+        "logicalFilename": "Northkeep",
+        "updatePolicy": "exact",
+        "tag": "6qi5D3Hmr7h"
+      },
+      "author": "Schlitzohr",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Oakwood",
+      "version": "1.01.4",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 61007,
+        "fileId": 351287,
+        "md5": "121c1ef96006a95d770db2c893ef5d15",
+        "fileSize": 14235675,
+        "logicalFilename": "Oakwood",
+        "updatePolicy": "exact",
+        "tag": "lx8drNyUCpU"
+      },
+      "author": "Schlitzohr",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Oars Rest",
+      "version": "1.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 41812,
+        "fileId": 168128,
+        "md5": "ed3794f141f756d606da50e7badc23ad",
+        "fileSize": 7626949,
+        "logicalFilename": "Oars Rest",
+        "updatePolicy": "exact",
+        "tag": "wL-KUmf4XyE"
+      },
+      "author": "Darkfox127",
+      "details": {
+        "category": "Locations -  New",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Pristine Vanilla Movement",
+      "version": "1.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 66635,
+        "fileId": 279306,
+        "md5": "cc68ff6ff6e44a063e8fa332d73b61de",
+        "fileSize": 369036,
+        "logicalFilename": "Pristine Vanilla Movement",
+        "updatePolicy": "exact",
+        "tag": "fUkkfQ3oyHs"
+      },
+      "author": "Everglaid",
+      "details": {
+        "category": "Animation",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "SSE Display Tweaks",
+      "version": "0.5.16",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 34705,
+        "fileId": 454679,
+        "md5": "0390a8377cc2dd9218693d062c974b47",
+        "fileSize": 186371,
+        "logicalFilename": "SSE Display Tweaks",
+        "updatePolicy": "exact",
+        "tag": "ZuXlyH-Yitm"
+      },
+      "author": "SlavicPotato",
+      "details": {
+        "category": "Utilities",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Sentinel - An Equipment Overhaul",
+      "version": "3.2.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 100985,
+        "fileId": 600826,
+        "md5": "c4d221b6003094681eb2105fa96cfe0c",
+        "fileSize": 146074453,
+        "logicalFilename": "Sentinel - An Equipment Overhaul",
+        "updatePolicy": "exact",
+        "tag": "AfQICRd8Ux-"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Installer",
+            "groups": [
+              {
+                "name": "Main Modules",
+                "choices": [
+                  {
+                    "name": "Core",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Priests and Acolytes",
+                    "idx": 2
+                  },
+                  {
+                    "name": "City Guards",
+                    "idx": 3
+                  }
+                ]
+              },
+              {
+                "name": "Disable AE Quests",
+                "choices": []
+              },
+              {
+                "name": "Patches",
+                "choices": [
+                  {
+                    "name": "More Craftable Equipment - Unenchanted Clothing and Specialty Gear",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Select Your Equipment",
+            "groups": [
+              {
+                "name": "Fur",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Hunter",
+                    "idx": 2
+                  }
+                ]
+              },
+              {
+                "name": "Hide",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Rogue",
+                    "idx": 2
+                  }
+                ]
+              },
+              {
+                "name": "Iron",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Rugged",
+                    "idx": 3
+                  },
+                  {
+                    "name": "Runic",
+                    "idx": 4
+                  },
+                  {
+                    "name": "Wrought",
+                    "idx": 5
+                  }
+                ]
+              },
+              {
+                "name": "Leather",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Rugged",
+                    "idx": 3
+                  }
+                ]
+              },
+              {
+                "name": "Steel",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Rugged",
+                    "idx": 3
+                  },
+                  {
+                    "name": "Classic Variant - White Fur",
+                    "idx": 4
+                  }
+                ]
+              },
+              {
+                "name": "Elven",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Bosmer",
+                    "idx": 2
+                  }
+                ]
+              },
+              {
+                "name": "Dwarven",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Jerral",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Velothi",
+                    "idx": 3
+                  }
+                ]
+              },
+              {
+                "name": "Scaled",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Rugged",
+                    "idx": 2
+                  }
+                ]
+              },
+              {
+                "name": "Plate",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Northern",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Rugged",
+                    "idx": 3
+                  },
+                  {
+                    "name": "Gilded",
+                    "idx": 4
+                  },
+                  {
+                    "name": "Classic Variant - Robes",
+                    "idx": 5
+                  }
+                ]
+              },
+              {
+                "name": "Orcish",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Hide",
+                    "idx": 3
+                  },
+                  {
+                    "name": "Warchief",
+                    "idx": 4
+                  }
+                ]
+              },
+              {
+                "name": "Glass",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Vvardenfell",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Ebony",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Noble",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Gilded",
+                    "idx": 3
+                  },
+                  {
+                    "name": "Gilded Noble",
+                    "idx": 4
+                  }
+                ]
+              },
+              {
+                "name": "Daedric",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Scaled",
+                    "idx": 2
+                  }
+                ]
+              },
+              {
+                "name": "Dragon",
+                "choices": [
+                  {
+                    "name": "Classic Dragonplate",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Classic Dragonscale",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Solstheim",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Classic Variant - Brown Fur",
+                    "idx": 4
+                  },
+                  {
+                    "name": "Classic Variant - White Fur",
+                    "idx": 5
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Select Your Equipment - Factions",
+            "groups": [
+              {
+                "name": "Companions - Armor",
+                "choices": [
+                  {
+                    "name": "Classic",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Companion",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Silver Hand",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Classic Variant - White Fur",
+                    "idx": 3
+                  }
+                ]
+              },
+              {
+                "name": "Companions - Weapons",
+                "choices": [
+                  {
+                    "name": "Skyforge Weapons",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Classic Variant - Wolf Shield",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Vigilants of Stendarr - Armor",
+                "choices": [
+                  {
+                    "name": "Robed Style",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Vigilants of Stendarr - Weapons",
+                "choices": [
+                  {
+                    "name": "Stendarr Weapons",
+                    "idx": 0
+                  }
+                ]
+              },
+              {
+                "name": "Civil War",
+                "choices": [
+                  {
+                    "name": "Stormcloaks",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Thalmor",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Imperial Battlemage",
+                    "idx": 2
+                  }
+                ]
+              },
+              {
+                "name": "Miscellaneous",
+                "choices": [
+                  {
+                    "name": "Common Gear",
+                    "idx": 0
+                  },
+                  {
+                    "name": "City Guards",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Priests",
+                    "idx": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Select NPC Outfits - Base Game",
+            "groups": [
+              {
+                "name": "NPCs",
+                "choices": [
+                  {
+                    "name": "Aela",
+                    "idx": 0
+                  },
+                  {
+                    "name": "Alessandra",
+                    "idx": 1
+                  },
+                  {
+                    "name": "Amren",
+                    "idx": 2
+                  },
+                  {
+                    "name": "Andurs",
+                    "idx": 3
+                  },
+                  {
+                    "name": "Angrenor",
+                    "idx": 4
+                  },
+                  {
+                    "name": "Anwen",
+                    "idx": 5
+                  },
+                  {
+                    "name": "Aranea",
+                    "idx": 6
+                  },
+                  {
+                    "name": "Avulstein",
+                    "idx": 8
+                  },
+                  {
+                    "name": "Bagrak",
+                    "idx": 9
+                  },
+                  {
+                    "name": "Banning",
+                    "idx": 10
+                  },
+                  {
+                    "name": "Benor",
+                    "idx": 11
+                  },
+                  {
+                    "name": "Bersi",
+                    "idx": 12
+                  },
+                  {
+                    "name": "Birna",
+                    "idx": 13
+                  },
+                  {
+                    "name": "Bolgeir",
+                    "idx": 14
+                  },
+                  {
+                    "name": "Bolund",
+                    "idx": 15
+                  },
+                  {
+                    "name": "Briehl",
+                    "idx": 17
+                  },
+                  {
+                    "name": "Brunwulf",
+                    "idx": 18
+                  },
+                  {
+                    "name": "Cedran",
+                    "idx": 19
+                  },
+                  {
+                    "name": "Danica",
+                    "idx": 20
+                  },
+                  {
+                    "name": "Dinya",
+                    "idx": 21
+                  },
+                  {
+                    "name": "Erandur",
+                    "idx": 23
+                  },
+                  {
+                    "name": "Faleen",
+                    "idx": 24
+                  },
+                  {
+                    "name": "Florentius",
+                    "idx": 25
+                  },
+                  {
+                    "name": "Freir",
+                    "idx": 26
+                  },
+                  {
+                    "name": "Geimund",
+                    "idx": 28
+                  },
+                  {
+                    "name": "Gorm",
+                    "idx": 31
+                  },
+                  {
+                    "name": "Hamal",
+                    "idx": 34
+                  },
+                  {
+                    "name": "Heimskr",
+                    "idx": 35
+                  },
+                  {
+                    "name": "Helgird",
+                    "idx": 36
+                  },
+                  {
+                    "name": "Helvard",
+                    "idx": 37
+                  },
+                  {
+                    "name": "Hjorunn",
+                    "idx": 38
+                  },
+                  {
+                    "name": "Hofgrir",
+                    "idx": 39
+                  },
+                  {
+                    "name": "Hroggar",
+                    "idx": 40
+                  },
+                  {
+                    "name": "Hrongar",
+                    "idx": 41
+                  },
+                  {
+                    "name": "Jenssen",
+                    "idx": 44
+                  },
+                  {
+                    "name": "Jervar",
+                    "idx": 45
+                  },
+                  {
+                    "name": "Jon",
+                    "idx": 46
+                  },
+                  {
+                    "name": "Jora",
+                    "idx": 47
+                  },
+                  {
+                    "name": "Jorgen",
+                    "idx": 48
+                  },
+                  {
+                    "name": "Kharag",
+                    "idx": 49
+                  },
+                  {
+                    "name": "Lob",
+                    "idx": 50
+                  },
+                  {
+                    "name": "Lond",
+                    "idx": 51
+                  },
+                  {
+                    "name": "Lortheim",
+                    "idx": 52
+                  },
+                  {
+                    "name": "Maramal",
+                    "idx": 53
+                  },
+                  {
+                    "name": "Mulush",
+                    "idx": 55
+                  },
+                  {
+                    "name": "Niranye",
+                    "idx": 57
+                  },
+                  {
+                    "name": "Nura",
+                    "idx": 58
+                  },
+                  {
+                    "name": "Orla",
+                    "idx": 59
+                  },
+                  {
+                    "name": "Ranmir",
+                    "idx": 60
+                  },
+                  {
+                    "name": "Rorlund",
+                    "idx": 61
+                  },
+                  {
+                    "name": "Runil",
+                    "idx": 62
+                  },
+                  {
+                    "name": "Senna",
+                    "idx": 63
+                  },
+                  {
+                    "name": "Sigurd",
+                    "idx": 64
+                  },
+                  {
+                    "name": "Silana",
+                    "idx": 65
+                  },
+                  {
+                    "name": "Sinmir",
+                    "idx": 66
+                  },
+                  {
+                    "name": "Skulvar",
+                    "idx": 67
+                  },
+                  {
+                    "name": "Solaf",
+                    "idx": 68
+                  },
+                  {
+                    "name": "Styrr",
+                    "idx": 69
+                  },
+                  {
+                    "name": "Thadgeir",
+                    "idx": 70
+                  },
+                  {
+                    "name": "Thonnir",
+                    "idx": 72
+                  },
+                  {
+                    "name": "Ulfberth",
+                    "idx": 74
+                  },
+                  {
+                    "name": "Ulundil",
+                    "idx": 75
+                  },
+                  {
+                    "name": "Valindor",
+                    "idx": 77
+                  },
+                  {
+                    "name": "Verulus",
+                    "idx": 78
+                  },
+                  {
+                    "name": "Yngvar",
+                    "idx": 80
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Select NPC Outfits - Mod Support",
+            "groups": [
+              {
+                "name": "NPCs",
+                "choices": [
+                  {
+                    "name": "Stronghold Orcs",
+                    "idx": 1
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Thuldor",
+      "details": {
+        "category": "Overhauls",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Sentinel - Required Resources",
+      "version": "3.2.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 100985,
+        "fileId": 600824,
+        "md5": "353f2d9e008f85b35e404f6a5aeb3bb8",
+        "fileSize": 2446346142,
+        "logicalFilename": "Sentinel - Required Resources",
+        "updatePolicy": "exact",
+        "tag": "f5TcnhT_tvH"
+      },
+      "author": "Thuldor",
+      "details": {
+        "category": "Overhauls",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Simple Dual Sheath for 1.6.629 and newer",
+      "version": "1.5.7",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 50049,
+        "fileId": 450438,
+        "md5": "ba19475ebc9e394c1c47ed2d9d9606cd",
+        "fileSize": 246087,
+        "logicalFilename": "Simple Dual Sheath for 1.6.629 and newer",
+        "updatePolicy": "exact",
+        "tag": "h4MbUMRALjK"
+      },
+      "author": "SlavicPotato",
+      "details": {
+        "category": "Immersion",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "SkyPatcher - AE",
+      "version": "6.3.3",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 106659,
+        "fileId": 738371,
+        "md5": "c5d65b309aec78224f1631e6ccbf9ed1",
+        "fileSize": 10512061,
+        "logicalFilename": "SkyPatcher - AE",
+        "updatePolicy": "exact",
+        "tag": "GDSh6LToaAg"
+      },
+      "author": "Zzyxzz",
+      "details": {
+        "category": "Utilities",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "SkyUI",
+      "version": "6.8",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 12604,
+        "fileId": 739315,
+        "md5": "cab9125e8f6d2c2dde648a1637d48e27",
+        "fileSize": 2679404,
+        "logicalFilename": "SkyUI",
+        "updatePolicy": "exact",
+        "tag": "WQU0Ligsld3"
+      },
+      "author": "SkyUI Team",
+      "details": {
+        "category": "User Interface",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Skyrim Script Extender (SKSE64)  Steam",
+      "version": "2.2.6",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 30379,
+        "fileId": 462377,
+        "md5": "b6f3d79a14b1b184ba71dc94abca861a",
+        "fileSize": 751136,
+        "logicalFilename": "Skyrim Script Extender (SKSE64)  Steam",
+        "updatePolicy": "exact",
+        "tag": "Z1CoHn28o6g"
+      },
+      "author": "SKSE Team",
+      "details": {
+        "category": "Utilities",
+        "type": "dinput"
+      },
+      "phase": 0
+    },
+    {
+      "name": "Skyrim Souls RE - Unpaused Menus",
+      "version": "3.1.2",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 27859,
+        "fileId": 754726,
+        "md5": "a34816954dd5f34db3d336f45af5b03e",
+        "fileSize": 6149589,
+        "logicalFilename": "Skyrim Souls RE - Unpaused Menus",
+        "updatePolicy": "exact",
+        "tag": "Hj9YKBToIHO"
+      },
+      "author": "Vermunds and Fudgyduff",
+      "details": {
+        "category": "User Interface",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "New Legion - Textures Medium",
+      "version": "1.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 30468,
+        "fileId": 113852,
+        "md5": "55045f0442aeb20ae7bb718fb5f80bf6",
+        "fileSize": 58251919,
+        "logicalFilename": "Textures Medium",
+        "updatePolicy": "exact",
+        "tag": "XItCjAXT34s"
+      },
+      "author": "NordwarUA",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "The Great Cities 2.01",
+      "version": "2.01",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 20272,
+        "fileId": 83508,
+        "md5": "4653229b9d53db5524da47ae8759f835",
+        "fileSize": 3355575,
+        "logicalFilename": "The Great Cities 2.01",
+        "updatePolicy": "exact",
+        "tag": "uJkWagdyDPZ"
+      },
+      "author": "soldierofwar",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "The Great City of Solitude 2.02",
+      "version": "2.02",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 22243,
+        "fileId": 123645,
+        "md5": "2a8bb59601685edba367a4d3f5d11390",
+        "fileSize": 4453936,
+        "logicalFilename": "The Great City of Solitude 2.02",
+        "updatePolicy": "exact",
+        "tag": "9oA4F5sxVdQ"
+      },
+      "author": "soldierofwar",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Vanilla hair remake",
+      "version": "1.0.2",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 63979,
+        "fileId": 501460,
+        "md5": "a7102ae31a8a305a22cffdd9106dff73",
+        "fileSize": 8827229,
+        "logicalFilename": "Vanilla hair remake",
+        "updatePolicy": "exact",
+        "tag": "5v0SIGh3Blx"
+      },
+      "author": "jg1",
+      "details": {
+        "category": "Body, Face, and Hair",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Simple Dual Sheath - XPMSSE Left Hand Sheath Rotation Fix",
+      "version": "4.80",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 50049,
+        "fileId": 204058,
+        "md5": "a6e09b46eaff0ebfe901f904eaeee917",
+        "fileSize": 112987,
+        "logicalFilename": "XPMSSE Left Hand Sheath Rotation Fix",
+        "updatePolicy": "exact",
+        "tag": "esEh9ZBKGv1"
+      },
+      "author": "SlavicPotato",
+      "details": {
+        "category": "Immersion",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "powerofthree's Tweaks",
+      "version": "1.15.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 51073,
+        "fileId": 661201,
+        "md5": "60dbd4f401b3d790e093688778b10d11",
+        "fileSize": 5890649,
+        "logicalFilename": "powerofthree's Tweaks",
+        "updatePolicy": "exact",
+        "tag": "gfFHkP9gvdl"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Main",
+            "groups": [
+              {
+                "name": "DLL",
+                "choices": [
+                  {
+                    "name": "SSE v1.6.629+ (\"Anniversary Edition\")",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "powerofthree",
+      "details": {
+        "category": "Bug Fixes",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Moon Monk's Robes - CBBE Patch",
+      "version": "1.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 82495,
+        "fileId": 348507,
+        "md5": "745b3f93009503a1e080859d93d95db5",
+        "fileSize": 2604347,
+        "logicalFilename": "Moon Monk's Robes - CBBE Patch",
+        "updatePolicy": "exact",
+        "tag": "hsu2RPoQG9e"
+      },
+      "author": "Kadraeus",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "RaceMenu - RaceMenu Anniversary Edition v0-4-20-0",
+      "version": "0.4.20.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 19080,
+        "fileId": 743640,
+        "md5": "92f8e9de4b2a1ef8a442752dab460ada",
+        "fileSize": 8657597,
+        "logicalFilename": "RaceMenu Anniversary Edition v0-4-20-0",
+        "updatePolicy": "exact",
+        "tag": "7lLSu84DJC4"
+      },
+      "author": "Expired",
+      "details": {
+        "category": "User Interface",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "BodySlide and Outfit Studio - v6.0.0",
+      "version": "6.0.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 201,
+        "fileId": 819750,
+        "md5": "2b739c2bc198758d6d426cb4ff2b4e33",
+        "fileSize": 13376296,
+        "logicalFilename": "BodySlide and Outfit Studio - v6.0.0",
+        "updatePolicy": "exact",
+        "tag": "qj7I3smApWj"
+      },
+      "author": "ousnius",
+      "details": {
+        "category": "Utilities",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Highly Improved Male Body Overhaul -HIMBO- - 01a) HIMBO V5 - Core (Nevernude Body)",
+      "version": "5.8",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 46311,
+        "fileId": 728973,
+        "md5": "fd8a7261c708f5f3d2210a087fbc1ab9",
+        "fileSize": 43941739,
+        "logicalFilename": "01a) HIMBO V5 - Core (Nevernude Body)",
+        "updatePolicy": "exact",
+        "tag": "55Xu9JqGX8y"
+      },
+      "author": "Kreiste and Novelyst",
+      "details": {
+        "category": "Body, Face, and Hair",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Sentinel - HIMBO Refit",
+      "version": "1.1.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 175029,
+        "fileId": 736843,
+        "md5": "285a62cc975fc0132d5952621f4d99fb",
+        "fileSize": 248838648,
+        "logicalFilename": "Sentinel - HIMBO Refit",
+        "updatePolicy": "exact",
+        "tag": "Kkv9-dZgm5s"
+      },
+      "author": "Jayysee Thuldor",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Sentinel - 3BA",
+      "version": "1.0.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 159370,
+        "fileId": 666405,
+        "md5": "6095cfa864fff9169ae39b897f054378",
+        "fileSize": 568059562,
+        "logicalFilename": "Sentinel - 3BA",
+        "updatePolicy": "exact",
+        "tag": "zlOxypaEGp6"
+      },
+      "author": "Morrigan0crow",
+      "details": {
+        "category": "Armour",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "02) HIMBO V5 - BG-DG-DB Refits",
+      "version": "5.8.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 46311,
+        "fileId": 731729,
+        "md5": "079ba6f86457e94c8c6c905890d28ce9",
+        "fileSize": 842028585,
+        "logicalFilename": "02) HIMBO V5 - BG-DG-DB Refits",
+        "updatePolicy": "exact",
+        "tag": "SX1JS_WvOUJ"
+      },
+      "author": "Kreiste and Novelyst",
+      "details": {
+        "category": "Body, Face, and Hair",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "XP32 Maximum Skeleton Special Extended",
+      "version": "5.06",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 1988,
+        "fileId": 469854,
+        "md5": "aba97eea51d54b2b3a0547e149e27026",
+        "fileSize": 2365019,
+        "logicalFilename": "XP32 Maximum Skeleton Special Extended",
+        "updatePolicy": "exact",
+        "tag": "7tU8ku7lSKt"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Installation",
+            "groups": [
+              {
+                "name": "Installation",
+                "choices": [
+                  {
+                    "name": "Extended",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Rigs",
+            "groups": [
+              {
+                "name": "Animation Rig Map",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Ingame Customizing",
+            "groups": [
+              {
+                "name": "Character and Weapons",
+                "choices": [
+                  {
+                    "name": "RaceMenu + XPMS(S)E MCM",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Randomizer",
+            "groups": [
+              {
+                "name": "Weapon Style",
+                "choices": [
+                  {
+                    "name": "SFW - Sync",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Animation Replacers for XPMS(S)E MCM",
+            "groups": [
+              {
+                "name": "Belt-Fastened Quivers",
+                "choices": []
+              },
+              {
+                "name": "Dagger on Back",
+                "choices": []
+              },
+              {
+                "name": "Dagger on Hip",
+                "choices": []
+              },
+              {
+                "name": "Magic",
+                "choices": []
+              },
+              {
+                "name": "Sword on Back",
+                "choices": []
+              },
+              {
+                "name": "Sword on Hip",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Animation Replacers for First Person",
+            "groups": [
+              {
+                "name": "Axe - Warning! Missing Sounds! Replacer not XPMS(S)E style!",
+                "choices": []
+              },
+              {
+                "name": "Sword - Warning! Missing Sounds! Replacer not XPMS(S)E style!",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Animation Replacers for Mounted Combat",
+            "groups": [
+              {
+                "name": "Axe - Warning! Missing Sounds! Replacer not XPMS(S)E style!",
+                "choices": []
+              },
+              {
+                "name": "Bow - Replacer not XPMS(S)E style!",
+                "choices": []
+              },
+              {
+                "name": "Sword - Warning! Missing Sounds! Replacer not XPMS(S)E style!",
+                "choices": []
+              }
+            ]
+          },
+          {
+            "name": "Compatibility Patches",
+            "groups": [
+              {
+                "name": "Compatibility Patches",
+                "choices": []
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Team XPMSE",
+      "details": {
+        "category": "Animation",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "CBBE SFW Edition",
+      "version": "1.1.4",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 74257,
+        "fileId": 790860,
+        "md5": "233c2c7af1137910c0a4dda2abd0286f",
+        "fileSize": 479285261,
+        "logicalFilename": "CBBE SFW Edition",
+        "updatePolicy": "exact",
+        "tag": "Vn0WQPJM133"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Base Options",
+            "groups": [
+              {
+                "name": "Underwear Options",
+                "choices": [
+                  {
+                    "name": "NeverNude",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Outfit Options",
+                "choices": [
+                  {
+                    "name": "Vanilla Outfits",
+                    "idx": 0
+                  }
+                ]
+              },
+              {
+                "name": "Face Options",
+                "choices": [
+                  {
+                    "name": "Face Pack",
+                    "idx": 0
+                  }
+                ]
+              },
+              {
+                "name": "Eyebrow Options",
+                "choices": [
+                  {
+                    "name": "Trimmed Brows",
+                    "idx": 2
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Underwear Options",
+            "groups": [
+              {
+                "name": "Mesh",
+                "choices": []
+              },
+              {
+                "name": "Color",
+                "choices": []
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Ousnius and Caliente",
+      "details": {
+        "category": "Body, Face, and Hair",
+        "type": ""
+      },
+      "phase": 0
+    }
+  ],
+  "modRules": [
+    {
+      "type": "after",
+      "reference": {
+        "fileExpression": "Moon Monk's Robes - CBBE Patch-82495-1-0-1673410526",
+        "fileMD5": "745b3f93009503a1e080859d93d95db5",
+        "versionMatch": "*",
+        "logicalFileName": "Moon Monk's Robes - CBBE Patch"
+      },
+      "source": {
+        "fileExpression": "Moon Monk's Robes - 2K-82495-1-2-1731869060",
+        "fileMD5": "73e125aae3ec31118eae5e0d517513c5",
+        "versionMatch": "*",
+        "logicalFileName": "Moon Monk's Robes - 2K"
+      }
+    },
+    {
+      "type": "before",
+      "reference": {
+        "fileExpression": "Sentinel - An Equipment Overhaul-100985-3-2-0-1740901216",
+        "fileMD5": "c4d221b6003094681eb2105fa96cfe0c",
+        "versionMatch": "*",
+        "logicalFileName": "Sentinel - An Equipment Overhaul"
+      },
+      "source": {
+        "fileExpression": "More Craftable Equipment-44666-1-4-0-1677446835",
+        "fileMD5": "129ca334ad2164b8c5fd8ecef191dc41",
+        "versionMatch": "*",
+        "logicalFileName": "More Craftable Equipment"
+      }
+    },
+    {
+      "type": "after",
+      "reference": {
+        "fileExpression": "Nirn Necessities - SMP Accessories-112481-1-03-1731887957",
+        "fileMD5": "610c9428ce0c77810c4401171f3b6e02",
+        "versionMatch": "*",
+        "logicalFileName": "Nirn Necessities - SMP Accessories"
+      },
+      "source": {
+        "fileExpression": "Nirn Necessities - SE by Xtudo - Non-HDT patch-133857-1-1731529156",
+        "fileMD5": "189b4b0ac81d8db50a94f313e306bd3d",
+        "versionMatch": "*",
+        "logicalFileName": "Nirn Necessities - SE by Xtudo - Non-HDT patch"
+      }
+    },
+    {
+      "type": "before",
+      "reference": {
+        "fileExpression": "Nirn Necessities - SE by Xtudo - 2K textures-133857-1-1731529241",
+        "fileMD5": "19a04d137f96f873a52993f3715d3e9b",
+        "versionMatch": "*",
+        "logicalFileName": "Nirn Necessities - SE by Xtudo - 2K textures"
+      },
+      "source": {
+        "fileExpression": "Nirn Necessities - SMP Accessories-112481-1-03-1731887957",
+        "fileMD5": "610c9428ce0c77810c4401171f3b6e02",
+        "versionMatch": "*",
+        "logicalFileName": "Nirn Necessities - SMP Accessories"
+      }
+    },
+    {
+      "type": "conflicts",
+      "reference": {
+        "logicalFileName": "Skyrim Script Extender 64 (SKSE64)",
+        "versionMatch": "<2.2.6 || >2.2.6"
+      },
+      "source": {
+        "fileExpression": "Skyrim Script Extender (SKSE64)-30379-2-2-6-1705522967",
+        "fileMD5": "b6f3d79a14b1b184ba71dc94abca861a",
+        "versionMatch": "*",
+        "logicalFileName": "Skyrim Script Extender (SKSE64)  Steam"
+      }
+    },
+    {
+      "type": "after",
+      "reference": {
+        "fileExpression": "Bruma Armor Expansion-63194-0-9-1644184656",
+        "fileMD5": "fb0c3426fdf3f5c4e002d424c6ebfa3e",
+        "versionMatch": "0.9.0",
+        "logicalFileName": "Bruma Armor Expansion"
+      },
+      "source": {
+        "fileExpression": "Textures Medium-30468-1-0-1574193036",
+        "fileMD5": "55045f0442aeb20ae7bb718fb5f80bf6",
+        "versionMatch": "*",
+        "logicalFileName": "Textures Medium"
+      }
+    },
+    {
+      "type": "before",
+      "reference": {
+        "fileExpression": "XP32 Maximum Skeleton Special Extended-1988-5-06-1707663131",
+        "fileMD5": "aba97eea51d54b2b3a0547e149e27026",
+        "versionMatch": "*",
+        "logicalFileName": "XP32 Maximum Skeleton Special Extended"
+      },
+      "source": {
+        "fileExpression": "XPMSSE Left Hand Skeleton Rotation Fix-50049-4-80-1621290459",
+        "fileMD5": "a6e09b46eaff0ebfe901f904eaeee917",
+        "versionMatch": "*",
+        "logicalFileName": "XPMSSE Left Hand Sheath Rotation Fix"
+      }
+    },
+    {
+      "type": "after",
+      "reference": {
+        "fileExpression": "Sentinel - Required Resources-100985-3-2-0-1740901115",
+        "fileMD5": "353f2d9e008f85b35e404f6a5aeb3bb8",
+        "versionMatch": "*",
+        "logicalFileName": "Sentinel - Required Resources"
+      },
+      "source": {
+        "fileExpression": "Sentinel - 3BA-159370-1-1758045822",
+        "fileMD5": "6095cfa864fff9169ae39b897f054378",
+        "versionMatch": "*",
+        "logicalFileName": "Sentinel - 3BA"
+      }
+    }
+  ],
+  "tools": [],
+  "plugins": [
+    {
+      "name": "Sentinel - Master Plugin.esp",
+      "enabled": true
+    },
+    {
+      "name": "SkyUI_SE.esp",
+      "enabled": true
+    },
+    {
+      "name": "RaceMenu.esp",
+      "enabled": true
+    },
+    {
+      "name": "RaceMenuPlugin.esp",
+      "enabled": true
+    },
+    {
+      "name": "XPMSE.esp",
+      "enabled": true
+    },
+    {
+      "name": "The Great Cities - Minor Cities and Towns.esp",
+      "enabled": true
+    },
+    {
+      "name": "WindhelmSSE.esp",
+      "enabled": true
+    },
+    {
+      "name": "JK's Whiterun's Outskirts.esp",
+      "enabled": true
+    },
+    {
+      "name": "The Great City of Solitude.esp",
+      "enabled": true
+    },
+    {
+      "name": "MoreCraftableEquipment.esp",
+      "enabled": true
+    },
+    {
+      "name": "Sentinel.esp",
+      "enabled": true
+    },
+    {
+      "name": "Sentinel - 3BA.esp",
+      "enabled": true
+    },
+    {
+      "name": "CBBE.esp",
+      "enabled": true
+    },
+    {
+      "name": "HIMBO.esp",
+      "enabled": true
+    },
+    {
+      "name": "RaceMenuMorphsHIMBO.esp",
+      "enabled": true
+    },
+    {
+      "name": "CommonClothes.esp",
+      "enabled": true
+    },
+    {
+      "name": "Cloaks&Capes.esp",
+      "enabled": true
+    },
+    {
+      "name": "AnotherOakwood.esp",
+      "enabled": true
+    },
+    {
+      "name": "aaaGraniteHill.esp",
+      "enabled": true
+    },
+    {
+      "name": "JKs Whiterun.esp",
+      "enabled": true
+    },
+    {
+      "name": "DIS_Heavy_Legion.esp",
+      "enabled": true
+    },
+    {
+      "name": "Sentinel - Priests and Acolytes.esp",
+      "enabled": true
+    },
+    {
+      "name": "evgnnsmpaccessories.esp",
+      "enabled": true
+    },
+    {
+      "name": "OarsRest.esp",
+      "enabled": true
+    },
+    {
+      "name": "JK's Riverwood.esp",
+      "enabled": true
+    },
+    {
+      "name": "Mage Clothing Expansion.esp",
+      "enabled": true
+    },
+    {
+      "name": "Common Clothing Expanded.esp",
+      "enabled": true
+    },
+    {
+      "name": "Arena - Markarth Side.esp",
+      "enabled": true
+    },
+    {
+      "name": "North Keep.esp",
+      "enabled": true
+    },
+    {
+      "name": "Kad_MoonMonkRobes.esp",
+      "enabled": true
+    },
+    {
+      "name": "Sentinel - More Craftable Equipment.esp",
+      "enabled": true
+    },
+    {
+      "name": "MCMHelper.esp",
+      "enabled": true
+    },
+    {
+      "name": "MoreCraftableEquipment_CloaksandCapes.esp",
+      "enabled": true
+    },
+    {
+      "name": "Sentinel - City Guards.esp",
+      "enabled": true
+    },
+    {
+      "name": "cheddars_mashups.esp",
+      "enabled": true
+    }
+  ],
+  "pluginRules": {
+    "plugins": [],
+    "groups": [
+      {
+        "name": "Loot",
+        "after": [
+          "Cell Encounter Zones"
+        ]
+      },
+      {
+        "name": "Interior Lighting",
+        "after": [
+          "Loot"
+        ]
+      },
+      {
+        "name": "Late Fixes & Changes",
+        "after": []
+      },
+      {
+        "name": "Khajiit Speak",
+        "after": []
+      },
+      {
+        "name": "Fixes & Resources",
+        "after": []
+      },
+      {
+        "name": "Skills & Perks",
+        "after": []
+      },
+      {
+        "name": "Alchemy Overhauls",
+        "after": []
+      },
+      {
+        "name": "Crafting",
+        "after": []
+      },
+      {
+        "name": "Dynamic Patches",
+        "after": []
+      },
+      {
+        "name": "Worldspace Settings",
+        "after": []
+      },
+      {
+        "name": "TUS",
+        "after": []
+      },
+      {
+        "name": "Body and Hair",
+        "after": []
+      },
+      {
+        "name": "dyna",
+        "after": []
+      },
+      {
+        "name": "late",
+        "after": [
+          "default",
+          "Dynamic LOD"
+        ]
+      },
+      {
+        "name": "TESTING",
+        "after": [
+          "Late Fixes & Changes"
+        ]
+      },
+      {
+        "name": "Dynamic LOD",
+        "after": [
+          "WWWWW",
+          "RRRRRRR"
+        ]
+      },
+      {
+        "name": "RRRRRRR",
+        "after": [
+          "Late Fixes & Changes",
+          "WWWWW"
+        ]
+      },
+      {
+        "name": "WWWWW",
+        "after": []
+      },
+      {
+        "name": "Dummy",
+        "after": []
+      }
+    ]
+  },
+  "collectionConfig": {
+    "recommendNewProfile": false,
+    "excludePluginRules": false,
+    "referenceTagScheme": "v1"
+  }
+}

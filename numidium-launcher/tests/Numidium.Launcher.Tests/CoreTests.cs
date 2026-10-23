@@ -296,6 +296,15 @@ public class LauncherSettingsTests
     }
 
     [Fact]
+    public void FindsAPackageBundledBesideTheLauncher()
+    {
+        using var launcher = new TempDir();
+        Assert.Null(LauncherSettings.BundledPackageDir(launcher.Path));
+        launcher.File(Path.Combine("numidium-client", ClientPackage.InfoFile), "{}");
+        Assert.Equal(Path.Combine(launcher.Path, "numidium-client"), LauncherSettings.BundledPackageDir(launcher.Path));
+    }
+
+    [Fact]
     public void SuggestsAFolderOnTheSteamDrive() =>
         Assert.Equal(@"E:\Numidium\Game", LauncherSettings.SuggestGameDir(@"E:\SteamLibrary\steamapps\common\Skyrim Special Edition"));
 }
