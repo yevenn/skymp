@@ -492,35 +492,32 @@ const saveBody = (actorId, body) => {
 };
 
 // Dev-only (enableConsoleCommandsForAll): a copy of your character next to you
-// carrying your synced body, to see what other players see without a second game
-const bodyDoubles = new Map();
-
-// Doubles are saved with the world like any actor, and this map is lost when the
-// gamemode reloads, so they're tagged with a profile id no player has and
-// cleaned up on load
+// carrying your synced body, to see what other players see without a second game.
+//
+// One double per player, shown and hidden rather than created and destroyed:
+// destroyActor only disables an actor and keeps it in the save, and its id
+// lingers in the profile index. The double's id is kept on the player
+// (rpBodyDouble), so it survives gamemode reloads and restarts. Doubles carry a
+// profile id no player has, so ones left showing can be hidden on load.
 const BODY_DOUBLE_PROFILE_ID = 0x7ffffff0;
-const removeLeftoverBodyDoubles = () => {
-  let removed = 0;
-  // The profile index keeps ids of doubles already destroyed, so some throw
+
+const hideLeftoverBodyDoubles = () => {
+  let hidden = 0;
   for (const id of mp.getActorsByProfileId(BODY_DOUBLE_PROFILE_ID)) {
-    try {
-      mp.destroyActor(id);
-      removed++;
-    } catch (e) {
-      // already gone
-    }
+    if (mp.get(id, 'isDisabled')) continue;
+    mp.set(id, 'isDisabled', true);
+    hidden++;
   }
-  if (removed) console.log(`[body] removed ${removed} leftover body double(s)`);
+  if (hidden) console.log(`[body] hid ${hidden} body double(s) left showing`);
 };
 
 const devCommandsEnabled = () => mp.getServerSettings().enableConsoleCommandsForAll === true;
 
 const toggleBodyDouble = (actorId) => {
-  const existing = bodyDoubles.get(actorId);
-  if (existing) {
-    mp.destroyActor(existing);
-    bodyDoubles.delete(actorId);
-    system(actorId, 'Body double removed.');
+  let doubleId = mp.get(actorId, 'rpBodyDouble');
+  if (typeof doubleId === 'number' && !mp.get(doubleId, 'isDisabled')) {
+    mp.set(doubleId, 'isDisabled', true);
+    system(actorId, 'Body double hidden.');
     return;
   }
   const [x, y, z] = mp.getActorPos(actorId);
@@ -528,17 +525,21 @@ const toggleBodyDouble = (actorId) => {
   const angleZ = Array.isArray(angle) ? angle[2] : 0;
   const rad = (angleZ * Math.PI) / 180;
   const pos = [x + Math.sin(rad) * 150, y + Math.cos(rad) * 150, z];
-  const doubleId = mp.createActor(0, pos, angleZ + 180, mp.getActorCellOrWorld(actorId), BODY_DOUBLE_PROFILE_ID);
+  if (typeof doubleId !== 'number') {
+    doubleId = mp.createActor(0, pos, angleZ + 180, mp.getActorCellOrWorld(actorId), BODY_DOUBLE_PROFILE_ID);
+    mp.set(actorId, 'rpBodyDouble', doubleId);
+  }
   mp.set(doubleId, 'appearance', mp.get(actorId, 'appearance'));
   const body = mp.get(actorId, 'rpBody');
   if (body) mp.set(doubleId, 'rpBody', body);
-  // createActor doesn't put the actor on the streaming grid, so nobody would see it
-  // until it moves; teleporting it in place does
-  mp.set(doubleId, 'locationalData', mp.get(doubleId, 'locationalData'));
-  bodyDoubles.set(actorId, doubleId);
+  // Moving it in front of the player also puts a new double on the streaming
+  // grid, which createActor doesn't; a hidden one starts streaming when shown
+  const { cellOrWorldDesc } = mp.get(actorId, 'locationalData');
+  mp.set(doubleId, 'locationalData', { cellOrWorldDesc, pos, rot: [0, 0, angleZ + 180] });
+  mp.set(doubleId, 'isDisabled', false);
   system(actorId, body
-    ? `Body double spawned with your synced body (${body.morphs.length} morphs, ${body.scales.length} bones). /double again removes it.`
-    : 'Body double spawned, but you have no synced body yet: open and close RaceMenu first.');
+    ? `Body double shown with your synced body (${body.morphs.length} morphs, ${body.scales.length} bones). /double again hides it.`
+    : 'Body double shown, but you have no synced body yet: open and close RaceMenu first.');
 };
 
 mp.makeProperty('rpChat', {
@@ -574,6 +575,14 @@ mp.makeProperty('rpBody', {
   updateNeighbor: BODY_UPDATE_NEIGHBOR,
 });
 
+// Server-side only: the player's body double, see toggleBodyDouble
+mp.makeProperty('rpBodyDouble', {
+  isVisibleByOwner: false,
+  isVisibleByNeighbors: false,
+  updateOwner: '',
+  updateNeighbor: '',
+});
+
 mp.makeEventSource('_rpBodySave', BODY_EVENT_SOURCE);
 
 mp._rpBodySave = (actorId, data) => {
@@ -588,13 +597,13 @@ mp._rpBodySave = (actorId, data) => {
       .map(([node, scale]) => `${node} ${scale.toFixed(2)}`);
     console.log(`[body] ${getName(actorId)} (${actorId.toString(16)}): ${body.morphs.length} morphs, `
       + `${body.scales.length} bones${changed.length ? ` (${changed.join(', ')})` : ''}`);
-    const doubleId = bodyDoubles.get(actorId);
-    if (doubleId) saveBody(doubleId, body);
+    const doubleId = mp.get(actorId, 'rpBodyDouble');
+    if (typeof doubleId === 'number') saveBody(doubleId, body);
   } catch (e) {
     console.error('[body] failed to save body', e);
   }
 };
 
-removeLeftoverBodyDoubles();
+hideLeftoverBodyDoubles();
 
 console.log('[numidium] gamemode loaded: roleplay chat, RaceMenu body sync');
