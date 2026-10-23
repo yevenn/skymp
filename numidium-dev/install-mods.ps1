@@ -17,7 +17,15 @@ $mods = @(
   @{ Name = "CBBE SFW";      Archive = "CBBE SFW Edition 74257 1.1.4 2026-08-16T16-17Z kATsMWBJX.7z";
      Folders = @("00 Required", "10 Outfits", "11 Outfits BodySlide", "20 Face Pack", "21 Thin + Trimmed Brows", "27 Dirt to Beauty Marks", "30 Underwear") },
   @{ Name = "HIMBO Core";    Archive = "01a) HIMBO V5 - Core (Nevernude Body)-46311-5-8-1772908656.7z"; Folders = @(".") },
-  @{ Name = "HIMBO Refits";  Archive = "02) HIMBO V5 - BG-DG-DB Refits-46311-5-8a-1773592661.7z";        Folders = @(".") }
+  @{ Name = "HIMBO Refits";  Archive = "02) HIMBO V5 - BG-DG-DB Refits-46311-5-8a-1773592661.7z";        Folders = @(".") },
+  # Clothing refits for mods in the load order (BodySlide projects, built by Build Numidium Bodies.bat)
+  @{ Name = "Sentinel HIMBO";  Archive = "Sentinel - HIMBO Refit-175029-1-1-1774899474.rar"; Folders = @(".") },
+  @{ Name = "Sentinel 3BA";    Archive = "Sentinel - 3BA-159370-1-1758045822.zip";
+     Folders = @("Sentinel - 3BA"); Exclude = @("meta.ini") },
+  # The rest of the archive is the Mage Clothing Expansion we already have, same version
+  @{ Name = "MCE BodySlide";   Archive = "Mage Clothing Expansion-128173-2-0-1-1727108300.zip";
+     Folders = @("."); Include = @("CalienteTools") },
+  @{ Name = "Moon Monk CBBE";  Archive = "Moon Monk's Robes - CBBE Patch-82495-1-0-1673410526.zip"; Folders = @(".") }
 )
 
 New-Item -ItemType Directory -Force $staging, $records, $backups | Out-Null
@@ -36,6 +44,7 @@ foreach ($mod in $mods) {
     foreach ($file in Get-ChildItem $src -Recurse -File) {
       $rel = $file.FullName.Substring($src.Length).TrimStart('\')
       if ($mod.Exclude -and ($mod.Exclude | Where-Object { $rel -like "$_\*" -or $rel -eq $_ })) { continue }
+      if ($mod.Include -and -not ($mod.Include | Where-Object { $rel -like "$_\*" -or $rel -eq $_ })) { continue }
       $dest = Join-Path $data $rel
       if (Test-Path -LiteralPath $dest) {
         $bk = Join-Path (Join-Path $backups $mod.Name) $rel

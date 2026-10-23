@@ -9,8 +9,9 @@ the repo is at `E:\Jarldom\skymp` and the test game copy at `E:\Jarldom\SkyrimDe
 | `skyrimdev-plugins.txt` | `E:\Jarldom\` | Plugins the launcher enables in the test copy; keep it in sync with the server's `loadOrder` |
 | `skymp5-front-config.js` | `skymp5-front/config.js` | Builds the in-game UI into `build/dist/client/Data/Platform/UI` (the real `config.js` is gitignored) |
 | `launch-skyrimdev-vanilla.ps1` + `.bat` | `E:\Jarldom\` | Starts the test copy with the plugins in `skyrimdev-plugins.txt`, then restores the shared `plugins.txt` when the game closes |
-| `install-mods.ps1` | run from anywhere | Installs the character customization mods from `E:\Jarldom\mod-downloads` into the test copy with the chosen installer options, recording every file in `E:\Jarldom\mod-installs\<mod>.json` and backing up replaced files to `E:\Jarldom\mod-backups\<mod>\` |
+| `install-mods.ps1` | run from anywhere | Installs the character customization mods and clothing refits from `E:\Jarldom\mod-downloads` into the test copy with the chosen installer options, recording every file in `E:\Jarldom\mod-installs\<mod>.json` and backing up replaced files to `E:\Jarldom\mod-backups\<mod>\` |
 | `bodyslide/Numidium.xml` | `<Data>\CalienteTools\BodySlide\SliderGroups\` | BodySlide groups "Numidium Female" / "Numidium Male": exactly one variant per output file |
+| `bodyslide/add-refits-to-groups.py` | run with `SliderSets` and `Numidium.xml` | Adds the clothing refit projects to the groups and reports output files claimed twice; its skip list records which variant won each clash. Dry run unless `--write` |
 | `Build Numidium Bodies.bat` | `E:\Jarldom\` | Builds both groups with BodySlide's command line, with morphs (`--trimorphs`) for RaceMenu's body sliders |
 | `patch-racemenu-height.py` | run with the game's `Data` folder | Limits RaceMenu's Height slider to 0.95–1.05 by patching the installed `RaceMenu.bsa`'s slider script into a loose `Scripts\racemenuplugin.pex` (players patch their own copy; no modified RaceMenu file is shipped). The server clamps height to the same range either way |
 
@@ -35,6 +36,23 @@ BodySlide groups (`bodyslide/Numidium.xml`) and why:
   are a separate download and not included.
 - Shared default shapes: **CBBE Vanilla** and **HIMBO Default** presets. Every player needs the
   same built meshes; RaceMenu sliders vary characters from there.
+
+## Clothing refits
+
+Modded clothing ships vanilla-shaped bodies; these BodySlide projects rebuild it for CBBE and HIMBO
+(also installed by `install-mods.ps1`, built with the groups above):
+
+| Download | Covers | Notes |
+|---|---|---|
+| [Sentinel - 3BA Conversion](https://www.nexusmods.com/skyrimspecialedition/mods/159370) | Sentinel, City Guards, Priests and Acolytes (female) | 3BA shares CBBE's sliders. Adds `Sentinel - 3BA.esp` (light, female meshes for 12 armor addons), appended to the load order. Some of its sets write to another set's mesh; the losers (gilded ebony, berserk light, Dawnstar heavy 1st person, officer 2) keep Sentinel's own female meshes |
+| [Sentinel - HIMBO Refit](https://www.nexusmods.com/skyrimspecialedition/mods/175029) | the same, male | |
+| [Mage Clothing Expansion](https://www.nexusmods.com/skyrimspecialedition/mods/128173) 2.0.1 | itself | Only `CalienteTools` installed; same version as the load order's plugin. Modest variants chosen |
+| [Moon Monk's Robes - CBBE Patch](https://www.nexusmods.com/skyrimspecialedition/mods/82495) | Moon Monk's Robes | Fixes the wrist gap with CBBE hands; the robes stay vanilla-shaped |
+
+Stay vanilla-shaped, no conversion exists or fits: Common Clothes and Armors, Cheddar's Mashups,
+Moon Monk's Robes, More Craftable Equipment (6 pieces) and Heavy Legion (its HIMBO refit targets an
+older version's mesh paths). Height and Body Scales still apply in them; only the body shape is
+vanilla.
 
 The new plugins were appended to the load order so earlier plugins keep their slots: saved
 inventories store raw form ids, so after launch only ever add plugins at the end.
