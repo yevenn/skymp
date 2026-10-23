@@ -12,6 +12,7 @@ the repo is at `E:\Jarldom\skymp` and the test game copy at `E:\Jarldom\SkyrimDe
 | `install-mods.ps1` | run from anywhere | Installs the character customization mods from `E:\Jarldom\mod-downloads` into the test copy with the chosen installer options, recording every file in `E:\Jarldom\mod-installs\<mod>.json` and backing up replaced files to `E:\Jarldom\mod-backups\<mod>\` |
 | `bodyslide/Numidium.xml` | `<Data>\CalienteTools\BodySlide\SliderGroups\` | BodySlide groups "Numidium Female" / "Numidium Male": exactly one variant per output file |
 | `Build Numidium Bodies.bat` | `E:\Jarldom\` | Builds both groups with BodySlide's command line, with morphs (`--trimorphs`) for RaceMenu's body sliders |
+| `patch-racemenu-height.py` | run with the game's `Data` folder | Limits RaceMenu's Height slider to 0.95–1.05 by patching the installed `RaceMenu.bsa`'s slider script into a loose `Scripts\racemenuplugin.pex` (players patch their own copy; no modified RaceMenu file is shipped). The server clamps height to the same range either way |
 
 ## Character customization
 

@@ -345,8 +345,19 @@ const BODY_SCALE_NODES = [
   'NPC L UpperarmTwist2 [LUt2]', 'NPC R UpperarmTwist2 [RUt2]',
 ];
 
-// Runs in the game
+// Allowed bone sizes, [min, max]. Height is also limited in the RaceMenu
+// slider by numidium-dev/patch-racemenu-height.py; keep the two in sync.
+const BODY_SCALE_DEFAULT_LIMITS = [0.1, 10];
+const BODY_SCALE_LIMITS = { NPC: [0.95, 1.05] };
+const clampBodyScale = (node, scale) => {
+  const [min, max] = BODY_SCALE_LIMITS[node] || BODY_SCALE_DEFAULT_LIMITS;
+  return Math.min(max, Math.max(min, scale));
+};
+
+// Runs in the game. Also clamps, for bodies saved before a limit was added.
 const BODY_APPLY_SRC = `
+  const SCALE_LIMITS = ${JSON.stringify(BODY_SCALE_LIMITS)};
+  const DEFAULT_LIMITS = ${JSON.stringify(BODY_SCALE_DEFAULT_LIMITS)};
   const applyMorphs = (sp, ref, body) => {
     const call = (fn, ...args) => sp.callNative('NiOverride', fn, undefined, ...args);
     call('ClearMorphs', ref);
@@ -356,8 +367,10 @@ const BODY_APPLY_SRC = `
   // Sets the bones that aren't at their synced size, in third and first person
   const applyScales = (sp, ref, body) => {
     for (const scale of body.scales) {
-      const [node, value] = scale;
-      if (scale.length !== 2 || typeof value !== 'number') continue; // older format
+      if (scale.length !== 2 || typeof scale[1] !== 'number') continue; // older format
+      const node = scale[0];
+      const [min, max] = SCALE_LIMITS[node] || DEFAULT_LIMITS;
+      const value = Math.min(max, Math.max(min, scale[1]));
       const current = sp.NetImmerse.getNodeScale(ref, node, false);
       if (!(current > 0) || Math.abs(current - value) < 0.001) continue;
       sp.NetImmerse.setNodeScale(ref, node, value, false);
@@ -468,7 +481,7 @@ const sanitizeBody = (data) => {
   const scales = data.scales
     .filter((s) => Array.isArray(s) && BODY_SCALE_NODES.includes(s[0]) && Number.isFinite(s[1]))
     .slice(0, MAX_BODY_SCALES)
-    .map(([node, scale]) => [node, clamp(scale, 0.1, 10)]);
+    .map(([node, scale]) => [node, clampBodyScale(node, scale)]);
   return { female: data.female === true, morphs, scales };
 };
 
