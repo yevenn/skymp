@@ -447,12 +447,12 @@ void TESModPlatform::ResizeHeadpartsArray(IVM* vm, StackID stackId,
     npc->headParts = nullptr;
     npc->numHeadParts = 0;
   } else {
-    npc->headParts = new RE::BGSHeadPart*[newSize];
+    // The game frees this array itself (RaceMenu does when head parts change),
+    // so it must come from the game's allocator, not operator new: a memory
+    // manager replacement such as Engine Fixes' crashes freeing foreign memory.
+    // Zero-filled.
+    npc->headParts = RE::calloc<RE::BGSHeadPart*>(newSize);
     npc->numHeadParts = newSize;
-
-    for (int8_t i = 0; i < npc->numHeadParts; ++i) {
-      npc->headParts[i] = nullptr;
-    }
   }
 }
 
