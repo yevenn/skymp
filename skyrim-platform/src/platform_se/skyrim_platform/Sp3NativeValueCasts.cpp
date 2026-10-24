@@ -86,6 +86,67 @@ Napi::Value SP3NativeValueCasts::NativeObjectToJsObject(
   return result;
 }
 
+CallNative::AnySafe SP3NativeValueCasts::JsArrayToNativeValue(
+  const Napi::Array& arr)
+{
+  const uint32_t length = arr.Length();
+  if (length == 0) {
+    // Element type unknown: CallNative creates an empty array of the
+    // parameter's type
+    return std::vector<std::string>();
+  }
+
+  const Napi::Value first = arr.Get(0u);
+  auto mismatch = [](uint32_t i) {
+    return std::runtime_error(
+      "Array arguments must hold one type: strings, numbers or booleans "
+      "(element " +
+      std::to_string(i) + " differs from the first)");
+  };
+
+  if (first.IsString()) {
+    std::vector<std::string> out;
+    out.reserve(length);
+    for (uint32_t i = 0; i < length; ++i) {
+      Napi::Value el = arr.Get(i);
+      if (!el.IsString()) {
+        throw mismatch(i);
+      }
+      out.push_back(static_cast<std::string>(el.As<Napi::String>()));
+    }
+    return out;
+  }
+
+  if (first.IsNumber()) {
+    std::vector<double> out;
+    out.reserve(length);
+    for (uint32_t i = 0; i < length; ++i) {
+      Napi::Value el = arr.Get(i);
+      if (!el.IsNumber()) {
+        throw mismatch(i);
+      }
+      out.push_back(el.As<Napi::Number>().DoubleValue());
+    }
+    return out;
+  }
+
+  if (first.IsBoolean()) {
+    std::vector<bool> out;
+    out.reserve(length);
+    for (uint32_t i = 0; i < length; ++i) {
+      Napi::Value el = arr.Get(i);
+      if (!el.IsBoolean()) {
+        throw mismatch(i);
+      }
+      out.push_back(static_cast<bool>(el.As<Napi::Boolean>()));
+    }
+    return out;
+  }
+
+  throw std::runtime_error(
+    "Array arguments must hold strings, numbers or booleans");
+}
+
 CallNative::AnySafe SP3NativeValueCasts::JsValueToNativeValue(
   const Napi::Value& v)
 {
@@ -100,6 +161,12 @@ CallNative::AnySafe SP3NativeValueCasts::JsValueToNativeValue(
 
   if (v.IsString()) {
     return static_cast<std::string>(v.As<Napi::String>());
+  }
+
+  // Arrays of strings, numbers or booleans, for Papyrus array parameters
+  // (e.g. UI.InvokeStringA); CallNative turns them into the parameter's type
+  if (v.IsArray()) {
+    return JsArrayToNativeValue(v.As<Napi::Array>());
   }
 
   if (v.IsUndefined() || v.IsNull() || v.IsObject()) {

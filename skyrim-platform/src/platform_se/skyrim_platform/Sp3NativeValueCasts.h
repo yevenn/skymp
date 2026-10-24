@@ -21,6 +21,8 @@ public:
 private:
   SP3NativeValueCasts();
 
+  CallNative::AnySafe JsArrayToNativeValue(const Napi::Array& arr);
+
   struct Impl;
   std::shared_ptr<Impl> pImpl;
 };

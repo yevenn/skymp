@@ -88,6 +88,95 @@ Variable CallNative::AnySafeToVariable(const CallNative::AnySafe& v,
 
 namespace {
 
+// An argument for a parameter of Papyrus type paramType: a Papyrus array for
+// array parameters (from a JS array of strings, numbers or booleans), else as
+// AnySafeToVariable converts it
+Variable ArgumentToVariable(const CallNative::AnySafe& v,
+                            const TypeInfo& paramType)
+{
+  if (!paramType.IsArray()) {
+    return CallNative::AnySafeToVariable(v, paramType.IsInt());
+  }
+
+  Variable res;
+  if (auto obj = std::get_if<CallNative::ObjectPtr>(&v); obj && !*obj) {
+    res.SetNone(); // null/undefined: a none array
+    return res;
+  }
+
+  using RawType = TypeInfo::RawType;
+  RawType elementType;
+  switch (paramType.GetUnmangledRawType()) {
+    case RawType::kStringArray:
+      elementType = RawType::kString;
+      break;
+    case RawType::kIntArray:
+      elementType = RawType::kInt;
+      break;
+    case RawType::kFloatArray:
+      elementType = RawType::kFloat;
+      break;
+    case RawType::kBoolArray:
+      elementType = RawType::kBool;
+      break;
+    default:
+      throw std::runtime_error(
+        "Only string, int, float and bool array arguments are supported");
+  }
+
+  const auto* strings = std::get_if<std::vector<std::string>>(&v);
+  const auto* numbers = std::get_if<std::vector<double>>(&v);
+  const auto* bools = std::get_if<std::vector<bool>>(&v);
+  const size_t size = strings ? strings->size()
+    : numbers                 ? numbers->size()
+    : bools                   ? bools->size()
+                              : 0;
+  if (!strings && !numbers && !bools) {
+    throw std::runtime_error("Expected an array argument");
+  }
+  // An empty array has no element type of its own: any kind fits
+  if (size > 0) {
+    const bool fits = (elementType == RawType::kString && strings) ||
+      ((elementType == RawType::kInt || elementType == RawType::kFloat) &&
+       numbers) ||
+      (elementType == RawType::kBool && bools);
+    if (!fits) {
+      throw std::runtime_error("Array argument of the wrong element type for " +
+                               paramType.TypeAsString());
+    }
+  }
+
+  static auto vm = VM::GetSingleton();
+  if (!vm) {
+    throw NullPointerException("vm");
+  }
+  RE::BSTSmartPointer<RE::BSScript::Array> array;
+  if (!vm->CreateArray(TypeInfo(elementType), static_cast<uint32_t>(size),
+                       array) ||
+      !array) {
+    throw std::runtime_error("Unable to create a Papyrus array");
+  }
+  for (uint32_t i = 0; i < size; ++i) {
+    auto& element = (*array)[i];
+    switch (elementType) {
+      case RawType::kString:
+        element.SetString(StringHolder::ThreadSingleton()[(*strings)[i]]);
+        break;
+      case RawType::kInt:
+        element.SetSInt(static_cast<int32_t>(floor((*numbers)[i])));
+        break;
+      case RawType::kFloat:
+        element.SetFloat(static_cast<float>((*numbers)[i]));
+        break;
+      default:
+        element.SetBool((*bools)[i]);
+        break;
+    }
+  }
+  res.SetArray(array);
+  return res;
+}
+
 CallNative::ObjectPtr GetSingleObjectPtr(
   const Variable& r, std::optional<const char*> className = std::nullopt)
 {
@@ -432,7 +521,7 @@ CallNative::AnySafe CallNative::CallNativeSafe(Arguments& args_)
     TypeInfo typeOut;
     f->GetParam(i, unusedNameOut, typeOut);
 
-    topArgs[i] = AnySafeToVariable(args[i], typeOut.IsInt());
+    topArgs[i] = ArgumentToVariable(args[i], typeOut);
   }
 
   if (funcInfo->IsLatent()) {
@@ -442,7 +531,7 @@ CallNative::AnySafe CallNative::CallNativeSafe(Arguments& args_)
         FixedString unusedNameOut;
         TypeInfo typeOut;
         f->GetParam(i, unusedNameOut, typeOut);
-        return AnySafeToVariable(args_.args[i], typeOut.IsInt());
+        return ArgumentToVariable(args_.args[i], typeOut);
       },
       (void*)numArgs);
     auto fsClassName = AnySafeToVariable(className).GetString();
