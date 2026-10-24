@@ -21,16 +21,68 @@ public partial class MainWindow : Window
         InitializeComponent();
         settings.SteamGameDir ??= SteamSkyrim.Find();
         settings.GameDir ??= LauncherSettings.SuggestGameDir(settings.SteamGameDir);
-        settings.ClientPackageDir ??= LauncherSettings.BundledPackageDir();
         SteamDirBox.Text = settings.SteamGameDir ?? "";
         GameDirBox.Text = settings.GameDir;
         HostBox.Text = settings.ServerHost;
         PortBox.Text = settings.ServerPort.ToString();
         ProfileBox.Text = settings.ProfileId?.ToString() ?? "";
-        PackageDirBox.Text = settings.ClientPackageDir ?? "";
         DownloadsDirBox.Text = DownloadsDir;
+        Title = $"Numidium · launcher {LauncherVersion}";
         RefreshStatus();
-        Loaded += async (_, _) => await RefreshModsAsync();
+        Loaded += async (_, _) =>
+        {
+            await CheckReleaseAsync();
+            await RefreshModsAsync();
+        };
+    }
+
+    private static readonly HttpClient Http = new();
+
+    /// <summary>The release this launcher was built for (release.ps1 sets it), or "dev".</summary>
+    private static string LauncherVersion =>
+        typeof(MainWindow).Assembly.GetCustomAttributes(typeof(System.Reflection.AssemblyInformationalVersionAttribute), false)
+            .OfType<System.Reflection.AssemblyInformationalVersionAttribute>().FirstOrDefault()?.InformationalVersion ?? "dev";
+
+    /// <summary>
+    /// Where the client package and the mod list come from: a folder picked for
+    /// testing, else the newest GitHub release (mirrored), else a package bundled
+    /// beside the launcher.
+    /// </summary>
+    private string? PackageDir =>
+        settings.ClientPackageDir is string dir && File.Exists(Path.Combine(dir, ClientPackage.InfoFile)) ? dir
+        : File.Exists(Path.Combine(LauncherSettings.ReleaseDir, ClientPackage.InfoFile)) ? LauncherSettings.ReleaseDir
+        : LauncherSettings.BundledPackageDir();
+
+    private bool UsesRelease => PackageDir == LauncherSettings.ReleaseDir;
+
+    /// <summary>Mirrors the newest release's package info and mod list, unless a
+    /// local package folder is picked. Offline, the last mirrored release stays.</summary>
+    private async Task CheckReleaseAsync()
+    {
+        if (settings.ClientPackageDir != null) return;
+        try
+        {
+            var release = await Releases.FetchLatestAsync(Http);
+            if (release == null)
+            {
+                Log($"No Numidium release on github.com/{Releases.Repository} yet.");
+                return;
+            }
+            var before = Releases.ReadMirrored(LauncherSettings.ReleaseDir)?.Tag;
+            await Releases.SyncAsync(Http, release, LauncherSettings.ReleaseDir);
+            if (before != release.Tag) Log($"Newest release: {release.Tag}.");
+            if (release.Find(Releases.LauncherAsset) != null && LauncherVersion != "dev" && release.Tag != "numidium-" + LauncherVersion)
+                Log($"A newer launcher is in {release.Tag}: download {Releases.LauncherAsset} from {release.PageUrl} and replace this one.");
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or IOException or System.Text.Json.JsonException)
+        {
+            var mirrored = Releases.ReadMirrored(LauncherSettings.ReleaseDir)?.Tag;
+            Log($"Couldn't check GitHub for releases ({ex.Message})." + (mirrored != null ? $" Using {mirrored}." : ""));
+        }
+        finally
+        {
+            RefreshStatus();
+        }
     }
 
     private Collection? collection;
@@ -41,7 +93,7 @@ public partial class MainWindow : Window
     private string DownloadsDir => settings.DownloadsDir ?? Downloads.DefaultFolder;
 
     private string? CollectionPath =>
-        settings.ClientPackageDir is string dir && File.Exists(Path.Combine(dir, Collection.FileName))
+        PackageDir is string dir && File.Exists(Path.Combine(dir, Collection.FileName))
             ? Path.Combine(dir, Collection.FileName)
             : null;
 
@@ -186,10 +238,7 @@ public partial class MainWindow : Window
         }
     }
 
-    private string? PackageInfoPath =>
-        settings.ClientPackageDir is string dir && File.Exists(Path.Combine(dir, ClientPackage.InfoFile))
-            ? Path.Combine(dir, ClientPackage.InfoFile)
-            : null;
+    private string? PackageInfoPath => PackageDir is string dir ? Path.Combine(dir, ClientPackage.InfoFile) : null;
 
     private void RefreshStatus()
     {
@@ -229,12 +278,16 @@ public partial class MainWindow : Window
             else SetStatus(GameStatus, Good, $"Ready, version {SteamSkyrim.GetVersion(copy.Dir)}.");
         }
 
+        PackageDirBox.Text = settings.ClientPackageDir is string local ? local
+            : UsesRelease ? $"GitHub release {Releases.ReadMirrored(LauncherSettings.ReleaseDir)?.Tag} (github.com/{Releases.Repository})"
+            : PackageDir is string bundled ? bundled
+            : $"Releases on github.com/{Releases.Repository}";
         var installed = ClientPackage.ReadInstalled(copy.Dir);
         var available = PackageInfoPath is string info ? ClientPackage.ReadInfo(info) : null;
         var skse = Skse.IsInstalled(copy.Dir) ? "SKSE installed" : "SKSE not installed";
         if (available == null)
             SetStatus(PackageStatus, installed == null ? Bad : Muted,
-                $"{skse}. Client {installed?.Version ?? "not installed"}; pick the folder with numidium-client.json to install or update it.");
+                $"{skse}. Client {installed?.Version ?? "not installed"}; no release found yet (check your connection, then restart the launcher).");
         else if (installed?.Version == available.Version)
             SetStatus(PackageStatus, Skse.IsInstalled(copy.Dir) ? Good : Bad, $"{skse}. Client {installed.Version}, up to date.");
         else
@@ -290,6 +343,14 @@ public partial class MainWindow : Window
         await RefreshModsAsync();
     }
 
+    private async void UseReleases_Click(object sender, RoutedEventArgs e)
+    {
+        settings.ClientPackageDir = null;
+        settings.Save();
+        await CheckReleaseAsync();
+        await RefreshModsAsync();
+    }
+
     private void GameDirBox_LostFocus(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrWhiteSpace(GameDirBox.Text)) return;
@@ -323,8 +384,7 @@ public partial class MainWindow : Window
             if (!Skse.IsInstalled(copy.Dir))
             {
                 Log($"Downloading SKSE from {Skse.Url}...");
-                using var http = new HttpClient();
-                var archive = await Skse.DownloadAsync(LauncherSettings.CacheDir, http);
+                var archive = await Skse.DownloadAsync(LauncherSettings.CacheDir, Http);
                 var files = await Task.Run(() => Skse.Install(copy.Dir, archive));
                 Log($"SKSE installed ({files.Count} files).");
             }
@@ -334,6 +394,16 @@ public partial class MainWindow : Window
                 var available = ClientPackage.ReadInfo(info);
                 if (ClientPackage.ReadInstalled(copy.Dir)?.Version != available.Version)
                 {
+                    if (UsesRelease)
+                    {
+                        Log($"Downloading the Numidium client {available.Version} ({available.Size / (1024 * 1024)} MB)...");
+                        var download = new Progress<(long Done, long Total)>(p =>
+                        {
+                            CopyProgress.Maximum = Math.Max(1, p.Total);
+                            CopyProgress.Value = p.Done;
+                        });
+                        await Releases.EnsurePackageAsync(Http, LauncherSettings.ReleaseDir, download);
+                    }
                     Log($"Installing the Numidium client {available.Version}...");
                     var packageProgress = new Progress<(int Done, int Total)>(p =>
                     {
@@ -453,8 +523,8 @@ public partial class MainWindow : Window
             if (manifest.HasNoModsIn(copy.Dir))
             {
                 Log($"{copy.Dir} has the base game but none of the server's {manifest.Plugins.Count} plugins: " +
-                    "Numidium's mods aren't installed there. The launcher can't install them yet; " +
-                    "to test, set the game folder to one that has them.");
+                    "Numidium's mods aren't installed yet. Download them from Nexus (the Nexus buttons in MODS), " +
+                    "then click Install downloaded.");
                 return;
             }
             var problems = manifest.Mismatches(copy.Dir);

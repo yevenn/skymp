@@ -11,14 +11,18 @@ public sealed class LauncherSettings
     public int ServerPort { get; set; } = 7777;
     /// <summary>Only offline (dev) servers use it; real servers authenticate.</summary>
     public int? ProfileId { get; set; }
-    /// <summary>Folder holding numidium-client.json and its zip (package-client.ps1's output).
-    /// Until releases are published, a local folder.</summary>
+    /// <summary>A folder holding numidium-client.json and its zip (package-client.ps1's
+    /// output), for testing a package before it's released. Null: GitHub releases.</summary>
     public string? ClientPackageDir { get; set; }
     /// <summary>Where the player's browser saves Nexus downloads.</summary>
     public string? DownloadsDir { get; set; }
 
+    /// <summary>Where the newest GitHub release is mirrored (<see cref="Releases"/>).</summary>
+    public static string ReleaseDir =>
+        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Numidium", "Release");
+
     /// <summary>A client package shipped in a numidium-client folder beside the launcher,
-    /// or null. Used when no package folder has been picked.</summary>
+    /// or null. Used when no package folder was picked and no release could be fetched.</summary>
     public static string? BundledPackageDir(string? launcherDir = null)
     {
         var dir = Path.Combine(launcherDir ?? AppContext.BaseDirectory, "numidium-client");

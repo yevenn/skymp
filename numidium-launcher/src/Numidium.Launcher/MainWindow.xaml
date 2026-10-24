@@ -78,7 +78,10 @@
                                  Background="#2A2A31" Foreground="{StaticResource Accent}" BorderThickness="0"/>
                     <TextBlock Style="{StaticResource Heading}" Text="NUMIDIUM CLIENT PACKAGE" Margin="0,12,0,6"/>
                     <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Browse..." Margin="8,0,0,0" Click="BrowsePackage_Click"/>
+                        <Button DockPanel.Dock="Right" Content="Releases" Margin="8,0,0,0" Click="UseReleases_Click"
+                                ToolTip="Use the newest release on GitHub instead of a local folder"/>
+                        <Button DockPanel.Dock="Right" Content="Browse..." Margin="8,0,0,0" Click="BrowsePackage_Click"
+                                ToolTip="Test a package from a local folder (package-client.ps1's output)"/>
                         <TextBox x:Name="PackageDirBox" IsReadOnly="True"/>
                     </DockPanel>
                     <TextBlock x:Name="PackageStatus" Margin="0,6,0,0" TextWrapping="Wrap"/>
