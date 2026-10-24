@@ -42,7 +42,9 @@ const HELP_LINES = [
   '  /b text — local out-of-character',
   '  /ooc text — global out-of-character',
   '  /roll [XdY] — roll dice nearby, e.g. /roll 2d6',
+  '  /names — hide or show the names above heads (or F1)',
   'Enter opens the chat, Esc closes it.',
+  'Look at someone and press X to introduce yourself. Until then, people know you by your ID.',
 ];
 
 // ---------------------------------------------------------------------------
@@ -145,14 +147,12 @@ const getOnlineActors = () => {
   return Array.isArray(actors) ? actors : [];
 };
 
+// The character's real name, kept server-side (see Identities). Their synced
+// name (mp.getActorName) is their ID, which everyone may see.
 const getName = (actorId) => {
-  try {
-    const name = mp.getActorName(actorId);
-    if (typeof name === 'string' && name.trim()) return name.trim();
-  } catch (e) {
-    // Fall through to the default below
-  }
-  return 'Stranger';
+  const name = mp.get(actorId, 'private.rpName');
+  if (typeof name === 'string' && name.trim()) return name.trim();
+  return getCharId(actorId) || 'Stranger';
 };
 
 const isInRange = (fromId, toId, range) => {
@@ -174,20 +174,22 @@ const deliver = (actorId, msg) => {
   mp.set(actorId, 'rpChat', { v, msgs });
 };
 
+// msg is a message, or a function making each recipient's own (names differ by
+// who knows whom: see label)
 const deliverNear = (fromId, range, msg) => {
   for (const actorId of getOnlineActors()) {
-    if (isInRange(fromId, actorId, range)) deliver(actorId, msg);
+    if (isInRange(fromId, actorId, range)) deliver(actorId, typeof msg === 'function' ? msg(actorId) : msg);
   }
 };
 
 const deliverAll = (msg) => {
-  for (const actorId of getOnlineActors()) deliver(actorId, msg);
+  for (const actorId of getOnlineActors()) deliver(actorId, typeof msg === 'function' ? msg(actorId) : msg);
 };
 
 const system = (actorId, text) => deliver(actorId, message([span(text, COLORS.system, true)], true));
 
 const logChat = (channel, actorId, text) => {
-  console.log(`[chat:${channel}] ${getName(actorId)} (${actorId.toString(16)}): ${text}`);
+  console.log(`[chat:${channel}] ${getName(actorId)} [${getCharId(actorId)}] (${actorId.toString(16)}): ${text}`);
 };
 
 const ensureEnding = (text) => (/[.!?…"')\]]$/.test(text) ? text : text + '.');
@@ -210,16 +212,15 @@ const roll = (actorId, spec) => {
   for (let i = 0; i < dice.count; i++) results.push(1 + Math.floor(Math.random() * dice.sides));
   const total = results.reduce((a, b) => a + b, 0);
   const detail = dice.count > 1 ? ` (${results.join(' + ')})` : '';
-  const text = `* ${getName(actorId)} rolls ${dice.count}d${dice.sides}: ${total}${detail}`;
-  logChat('roll', actorId, text);
-  deliverNear(actorId, RANGES.emote, message([span(text, COLORS.roll)]));
+  const what = `rolls ${dice.count}d${dice.sides}: ${total}${detail}`;
+  logChat('roll', actorId, what);
+  deliverNear(actorId, RANGES.emote, (to) => message([span(`* ${label(to, actorId)} ${what}`, COLORS.roll)]));
 };
 
 const speak = (actorId, verb, text, range, color) => {
-  const name = getName(actorId);
   logChat(verb, actorId, text);
-  deliverNear(actorId, range, message([
-    span(`${name} ${verb}: `, COLORS.name),
+  deliverNear(actorId, range, (to) => message([
+    span(`${label(to, actorId)} ${verb}: `, COLORS.name),
     span(`"${ensureEnding(text)}"`, color),
   ]));
 };
@@ -230,19 +231,19 @@ const commands = {
   sh: (actorId, text) => speak(actorId, 'shouts', /[!?]$/.test(text) ? text : text.replace(/[.]$/, '') + '!', RANGES.shout, COLORS.shout),
   me: (actorId, text) => {
     logChat('me', actorId, text);
-    deliverNear(actorId, RANGES.emote, message([span(`* ${getName(actorId)} ${text}`, COLORS.me)]));
+    deliverNear(actorId, RANGES.emote, (to) => message([span(`* ${label(to, actorId)} ${text}`, COLORS.me)]));
   },
   do: (actorId, text) => {
     logChat('do', actorId, text);
-    deliverNear(actorId, RANGES.emote, message([span(`* ${ensureEnding(text)} (( ${getName(actorId)} ))`, COLORS.do)]));
+    deliverNear(actorId, RANGES.emote, (to) => message([span(`* ${ensureEnding(text)} (( ${label(to, actorId)} ))`, COLORS.do)]));
   },
   b: (actorId, text) => {
     logChat('looc', actorId, text);
-    deliverNear(actorId, RANGES.looc, message([span(`(( ${getName(actorId)}: ${text} ))`, COLORS.looc, true)], true));
+    deliverNear(actorId, RANGES.looc, (to) => message([span(`(( ${label(to, actorId)}: ${text} ))`, COLORS.looc, true)], true));
   },
   ooc: (actorId, text) => {
     logChat('ooc', actorId, text);
-    deliverAll(message([span(`[OOC] ${getName(actorId)}: ${text}`, COLORS.ooc, true)], true));
+    deliverAll((to) => message([span(`[OOC] ${label(to, actorId)}: ${text}`, COLORS.ooc, true)], true));
   },
 };
 
@@ -283,6 +284,10 @@ const handleChat = (actorId, rawText) => {
     mp.setRaceMenuOpen(actorId, true);
     return;
   }
+  if (name === 'names') {
+    toggleNames(actorId);
+    return;
+  }
   if (name === 'help' || name === 'h') {
     for (const line of HELP_LINES) system(actorId, line);
     return;
@@ -307,6 +312,487 @@ const handleChat = (actorId, rawText) => {
     return;
   }
   command(actorId, args);
+};
+
+// ---------------------------------------------------------------------------
+// Identities: IDs until people introduce themselves
+// ---------------------------------------------------------------------------
+//
+// Every character has a short random ID (rpTag, seen by everyone near). Their
+// name, typed in RaceMenu, is kept server-side (private.rpName), and their synced
+// name (appearance.name, what the game shows in "Talk ...") is set to the ID, so
+// no client learns a name it wasn't told.
+//
+// Introducing yourself (X on someone, then the menu) adds you to what they know:
+//   private.rpKnows on the viewer: form ids of the characters they know
+//   private.rpKnownBy on the character: form ids of who knows them (for renames)
+//   rpKnown (seen by its owner only): { formId: name } of the characters they know
+// Labels over heads and in chat show the name to those who know it, the ID to the rest.
+
+const ID_ALPHABET = '23456789ABCDEFGHJKMNPQRSTUVWXYZ'; // no 0/O, 1/I/L
+const ID_LENGTH = 5;
+const MAX_NAME_LENGTH = 40;
+const INTRODUCE_RANGE = 500;
+
+const getCharId = (actorId) => {
+  const tag = mp.get(actorId, 'rpTag');
+  return tag && typeof tag.id === 'string' ? tag.id : null;
+};
+
+const newCharId = () => {
+  for (;;) {
+    let id = '';
+    for (let i = 0; i < ID_LENGTH; i++) id += ID_ALPHABET[Math.floor(Math.random() * ID_ALPHABET.length)];
+    if (mp.findFormsByPropertyValue('private.indexed.rpCharId', id).length === 0) return id;
+  }
+};
+
+const idList = (value) => (Array.isArray(value) ? value.filter((v) => typeof v === 'number') : []);
+
+const knows = (viewerId, actorId) => viewerId === actorId || idList(mp.get(viewerId, 'private.rpKnows')).includes(actorId);
+
+// How viewerId sees actorId: their name if introduced, else their ID
+const label = (viewerId, actorId) => (knows(viewerId, actorId) ? getName(actorId) : getCharId(actorId) || 'Stranger');
+
+// Sends viewerId the names of everyone they know
+const refreshKnown = (viewerId) => {
+  const known = {};
+  for (const id of idList(mp.get(viewerId, 'private.rpKnows'))) known[id] = getName(id);
+  mp.set(viewerId, 'rpKnown', known);
+};
+
+const learn = (viewerId, actorId) => {
+  if (knows(viewerId, actorId)) return false;
+  mp.set(viewerId, 'private.rpKnows', [...idList(mp.get(viewerId, 'private.rpKnows')), actorId]);
+  mp.set(actorId, 'private.rpKnownBy', [...idList(mp.get(actorId, 'private.rpKnownBy')), viewerId]);
+  refreshKnown(viewerId);
+  return true;
+};
+
+// Gives the character an ID if it has none, and moves a name typed in RaceMenu
+// (which arrives as the synced name) to private.rpName, putting the ID back
+const ensureIdentity = (actorId) => {
+  let id = getCharId(actorId);
+  if (!id) {
+    id = newCharId();
+    mp.set(actorId, 'private.indexed.rpCharId', id);
+    mp.set(actorId, 'rpTag', { id });
+    console.log(`[identity] ${actorId.toString(16)} is ${id}`);
+  }
+  const appearance = mp.get(actorId, 'appearance');
+  if (!appearance || typeof appearance.name !== 'string' || appearance.name === id) return;
+  const typed = appearance.name.replace(/[\u0000-\u001f<>]/g, '').trim().slice(0, MAX_NAME_LENGTH);
+  if (typed && typed !== mp.get(actorId, 'private.rpName')) {
+    console.log(`[identity] ${id} is named ${typed}`);
+    mp.set(actorId, 'private.rpName', typed);
+    for (const viewerId of idList(mp.get(actorId, 'private.rpKnownBy'))) refreshKnown(viewerId);
+  }
+  mp.set(actorId, 'appearance', { ...appearance, name: id });
+};
+
+const isOnline = (actorId) => getOnlineActors().includes(actorId);
+
+const introduce = (actorId, targetId) => {
+  if (targetId === actorId || !isOnline(targetId) || !getCharId(targetId)) return;
+  if (!isInRange(actorId, targetId, INTRODUCE_RANGE)) {
+    system(actorId, `${label(actorId, targetId)} is too far away to introduce yourself.`);
+    return;
+  }
+  const name = getName(actorId);
+  const isNew = learn(targetId, actorId);
+  console.log(`[identity] ${name} [${getCharId(actorId)}] introduced themselves to ${getName(targetId)} [${getCharId(targetId)}]`);
+  deliverNear(actorId, RANGES.emote, (to) => {
+    if (to === actorId) return message([span(`* You introduce yourself to ${label(actorId, targetId)} as ${name}.`, COLORS.me)]);
+    if (to === targetId) {
+      return message([span(isNew ? `* ${getCharId(actorId)} introduces themselves as ${name}.` : `* ${name} introduces themselves again.`, COLORS.me)]);
+    }
+    return message([span(`* ${label(to, actorId)} introduces themselves to ${label(to, targetId)}.`, COLORS.me)]);
+  });
+};
+
+const introduceToAll = (actorId) => {
+  const name = getName(actorId);
+  const near = getOnlineActors().filter((id) => id !== actorId && isInRange(actorId, id, RANGES.say));
+  const learned = new Set(near.filter((id) => learn(id, actorId)));
+  console.log(`[identity] ${name} [${getCharId(actorId)}] introduced themselves to everyone near (${learned.size} new)`);
+  deliverNear(actorId, RANGES.say, (to) => {
+    if (to === actorId) {
+      return message([span(near.length
+        ? `* You introduce yourself to everyone around as ${name}.`
+        : `* You introduce yourself as ${name}, but nobody is near enough to hear.`, COLORS.me)]);
+    }
+    return message([span(learned.has(to)
+      ? `* ${getCharId(actorId)} introduces themselves to everyone as ${name}.`
+      : `* ${name} introduces themselves to everyone.`, COLORS.me)]);
+  });
+};
+
+const toggleNames = (actorId) => {
+  const ui = mp.get(actorId, 'rpUi') || {};
+  const namesHidden = !ui.namesHidden;
+  mp.set(actorId, 'rpUi', { ...ui, namesHidden });
+  system(actorId, namesHidden ? 'Names above heads hidden. F1 or /names shows them again.' : 'Names above heads shown.');
+};
+
+// Runs in the game: draws labels over other players' heads in the game's HUD
+// (Scaleform), so they're in screenshots, in the HUD's own font with a dark outline.
+//
+// Text fields made from outside can't be given a font (their html and embedFonts
+// can't be set through SKSE's UI functions), so each line is a copy of the HUD's
+// "Letter" symbol (hudmenu.swf): a text field already in $EverywhereMediumFont,
+// made with MovieClip.attachMovie. Only writes reach these copies (reading them
+// back through SKSE returns nothing), so their state is tracked here.
+// Per label slot: two lines (name, then the ID under it once known), each drawn
+// four times in black around a light copy.
+const NAMES_HUD_SRC = `
+  const HUD = 'HUD Menu';
+  // State shared by this gamemode's code in the game (labels, players seen, known
+  // names). Not sp.storage: it hands back copies, so arrays and changes made inside
+  // stored objects don't survive.
+  const shared = () => (globalThis.numidiumShared = globalThis.numidiumShared || {});
+  const OUTLINE = [[-1.2, 0], [1.2, 0], [0, -1.2], [0, 1.2]];
+  const COPIES = OUTLINE.length + 1; // the last copy is the light one
+  const LINES = 2;
+  const SYMBOL = 'Letter';
+  const SYMBOL_FIELD = 'LetterTextInstance';
+  const SYMBOL_FONT_SIZE = 55; // the Letter field's own size, scaled down per line
+  const SYMBOL_CENTER = 30; // half the Letter field's width: autoSize grows it around this
+  const LINE_SIZE = [22, 15];
+  const LINE_COLOR = [0xFAFAFA, 0xC8C8C8];
+  const MAX_DISTANCE = 640; // about 9 m, measured in game: names show up to this far
+  const CONTAINER = 'numidiumNames';
+  const ROOT = '_root.' + CONTAINER;
+  const clipName = (slot, line, k) => 'rpName' + slot + '_' + line + '_' + k;
+  // The HUD's visible area in its own coordinates (it's letterboxed at other aspect ratios)
+  const stageRect = (sp, st) => {
+    const now = Date.now();
+    if (st.rpStage && now < st.rpStage.until) return st.rpStage;
+    const get = (p, fallback) => { const v = sp.Ui.getFloat(HUD, 'Stage.visibleRect.' + p); return typeof v === 'number' && isFinite(v) && (p === 'x' || p === 'y' || v > 0) ? v : fallback; };
+    st.rpStage = { x: get('x', 0), y: get('y', 0), w: get('width', 1280), h: get('height', 720), until: now + 5000 };
+    return st.rpStage;
+  };
+  // Makes our container and the slot's copies, once per game session
+  const ensureClips = (sp, st, slot) => {
+    st.rpMade = st.rpMade || {};
+    if (!st.rpMade.container) {
+      sp.Ui.invokeStringA(HUD, '_root.createEmptyMovieClip', [CONTAINER, '-16200']);
+      st.rpMade.container = true;
+    }
+    if (st.rpMade[slot]) return;
+    st.rpMade[slot] = true;
+    for (let line = 0; line < LINES; line++) {
+      for (let k = 0; k < COPIES; k++) {
+        const name = clipName(slot, line, k);
+        const clip = ROOT + '.' + name;
+        sp.Ui.invokeStringA(HUD, ROOT + '.attachMovie', [SYMBOL, name, String(1 + (slot * LINES + line) * COPIES + k)]);
+        const scale = 100 * LINE_SIZE[line] / SYMBOL_FONT_SIZE;
+        sp.Ui.setFloat(HUD, clip + '._xscale', scale);
+        sp.Ui.setFloat(HUD, clip + '._yscale', scale);
+        sp.Ui.setString(HUD, clip + '.' + SYMBOL_FIELD + '.autoSize', 'center');
+        sp.Ui.setFloat(HUD, clip + '.' + SYMBOL_FIELD + '.textColor', k < OUTLINE.length ? 0x000000 : LINE_COLOR[line]);
+        sp.Ui.setBool(HUD, clip + '._visible', false);
+        sp.Ui.setFloat(HUD, clip + '._visible', 0);
+      }
+    }
+    st.rpSlotText = st.rpSlotText || {};
+    st.rpSlotText[slot] = [null, null];
+    st.rpSlotVisible = st.rpSlotVisible || {};
+    st.rpSlotVisible[slot] = [false, false];
+  };
+  const setLineVisible = (sp, st, slot, line, visible) => {
+    if (st.rpSlotVisible[slot][line] === visible) return;
+    st.rpSlotVisible[slot][line] = visible;
+    for (let k = 0; k < COPIES; k++) {
+      // Both ways: setBool alone didn't take on the earlier text fields, a number did
+      sp.Ui.setBool(HUD, ROOT + '.' + clipName(slot, line, k) + '._visible', visible);
+      sp.Ui.setFloat(HUD, ROOT + '.' + clipName(slot, line, k) + '._visible', visible ? 1 : 0);
+    }
+  };
+  const setVisible = (sp, st, slot, visible) => {
+    if (!st.rpSlotVisible || !st.rpSlotVisible[slot]) return;
+    for (let line = 0; line < LINES; line++) setLineVisible(sp, st, slot, line, visible && st.rpSlotText[slot][line] !== '');
+  };
+  const setLineText = (sp, st, slot, line, text) => {
+    if (st.rpSlotText[slot][line] === text) return;
+    st.rpSlotText[slot][line] = text;
+    for (let k = 0; k < COPIES; k++) sp.Ui.setString(HUD, ROOT + '.' + clipName(slot, line, k) + '.' + SYMBOL_FIELD + '.text', text);
+  };
+  // Puts a line's copies with its center at (x, y)
+  const placeLine = (sp, slot, line, x, y, alpha) => {
+    const scale = LINE_SIZE[line] / SYMBOL_FONT_SIZE;
+    for (let k = 0; k < COPIES; k++) {
+      const clip = ROOT + '.' + clipName(slot, line, k);
+      const [dx, dy] = k < OUTLINE.length ? OUTLINE[k] : [0, 0];
+      sp.Ui.setFloat(HUD, clip + '._x', x - SYMBOL_CENTER * scale + dx);
+      sp.Ui.setFloat(HUD, clip + '._y', y - SYMBOL_FONT_SIZE * scale / 2 + dy);
+      sp.Ui.setFloat(HUD, clip + '._alpha', k < OUTLINE.length ? alpha * 0.85 : alpha);
+    }
+  };
+  // Problems found in the game, sent to the server's log by the input event source
+  const report = (st, text) => {
+    st.rpReports = st.rpReports || [];
+    st.rpReportKeys = st.rpReportKeys || {};
+    const key = String(text).replace(/[0-9]+/g, '#'); // the same problem with other numbers is no news
+    if (st.rpReportKeys[key] || st.rpReports.length >= 20) return;
+    st.rpReportKeys[key] = true;
+    st.rpReports.push(String(text).slice(0, 800));
+  };
+  const slotFor = (st, serverId) => {
+    st.rpSlots = st.rpSlots || {};
+    if (st.rpSlots[serverId] !== undefined) return st.rpSlots[serverId];
+    const used = new Set(Object.values(st.rpSlots));
+    let slot = 0;
+    while (used.has(slot)) slot++;
+    st.rpSlots[serverId] = slot;
+    return slot;
+  };
+`;
+
+// Other players: their label over the head and in the "Talk ..." prompt, as this
+// player knows them. Runs every frame for each player near.
+const NAMES_UPDATE_NEIGHBOR = NAMES_HUD_SRC + `
+  const tag = ctx.value;
+  const sp = ctx.sp;
+  const st = shared();
+  let step = 'start';
+  try {
+  if (!tag || typeof tag.id !== 'string' || !ctx.refr) return;
+  // The reference again from its id: the one SkyMP hands over can be from an older call
+  step = 'refr';
+  const formId = ctx.refr.getFormID();
+  const refr = sp.ObjectReference.from(sp.Game.getFormEx(formId));
+  if (!refr) return;
+  const serverId = ctx.getFormIdInServerFormat(formId);
+  const name = (st.rpKnown || {})[serverId] || null;
+  const text = name || tag.id;
+  st.rpSeen = st.rpSeen || {};
+  if (!st.rpSeen[serverId]) report(st, 'names: running for ' + tag.id + ' (' + serverId + ')');
+  st.rpSeen[serverId] = { at: Date.now(), id: tag.id };
+  step = 'displayName';
+  if (refr.getDisplayName() !== text) refr.setDisplayName(text, true);
+
+  const slot = slotFor(st, serverId);
+  step = 'clips';
+  ensureClips(sp, st, slot);
+  step = 'player';
+  const player = sp.Game.getPlayer();
+  const actor = sp.Actor.from(refr);
+  step = 'distance';
+  const distance = player.getDistance(refr);
+  let point = null;
+  step = 'visibility';
+  if (!st.rpNamesHidden && refr.is3DLoaded() && distance <= MAX_DISTANCE && !(actor && actor.isSneaking()) && player.hasLOS(refr)) {
+    step = 'head';
+    const head = 'NPC Head [Head]';
+    const screen = sp.worldPointToScreenPoint([
+      sp.NetImmerse.getNodeWorldPositionX(refr, head, false),
+      sp.NetImmerse.getNodeWorldPositionY(refr, head, false),
+      sp.NetImmerse.getNodeWorldPositionZ(refr, head, false) + 26,
+    ])[0];
+    if (screen && screen[2] > 0) point = screen;
+  }
+  step = 'draw';
+  if (!point) {
+    setVisible(sp, st, slot, false);
+    return;
+  }
+  // Name over the ID once known, else the ID alone
+  setLineText(sp, st, slot, 0, name || tag.id);
+  setLineText(sp, st, slot, 1, name ? tag.id : '');
+  const rect = stageRect(sp, st);
+  const x = rect.x + point[0] * rect.w;
+  const bottom = rect.y + (1 - point[1]) * rect.h;
+  const alpha = Math.round(100 * Math.min(1, Math.max(0.5, 1 - (distance / MAX_DISTANCE - 0.7) / 0.6)));
+  if (name) {
+    placeLine(sp, slot, 1, x, bottom - LINE_SIZE[1] * 0.6, alpha);
+    placeLine(sp, slot, 0, x, bottom - LINE_SIZE[1] * 1.2 - LINE_SIZE[0] * 0.6, alpha);
+  } else {
+    placeLine(sp, slot, 0, x, bottom - LINE_SIZE[0] * 0.6, alpha);
+  }
+  setVisible(sp, st, slot, true);
+  if (!st.rpDiagSent) {
+    st.rpDiagSent = true;
+    report(st, 'names: first label drawn ' + JSON.stringify({ stage: rect, screen: point, x, bottom }));
+  }
+  } catch (e) {
+    report(st, 'names: at ' + step + ': ' + (e && e.stack || e));
+  }
+`;
+
+const KNOWN_UPDATE_OWNER = `
+  const st = globalThis.numidiumShared = globalThis.numidiumShared || {};
+  st.rpKnown = ctx.value && typeof ctx.value === 'object' ? ctx.value : {};
+`;
+
+const UI_UPDATE_OWNER = `
+  const st = globalThis.numidiumShared = globalThis.numidiumShared || {};
+  st.rpNamesHidden = !!(ctx.value && ctx.value.namesHidden);
+`;
+
+// Runs in the browser: the interaction menu for a player under the crosshair.
+// Built from a list of actions, so other targets (doors, chests) can bring theirs.
+function browserInteractMenu(data) {
+  var sp = window.skyrimPlatform;
+  var old = document.getElementById('rp-interact');
+  if (old) old.remove();
+  if (!data) return;
+  var menu = document.createElement('div');
+  menu.id = 'rp-interact';
+  // Sizes in vh, so the menu scales with the screen like the chat does
+  menu.style.cssText = 'position:fixed;left:50%;top:55%;transform:translateX(-50%);min-width:32vh;padding:1.3vh 1.6vh;' +
+    'background:rgba(12,12,14,0.85);border:1px solid rgba(255,255,255,0.2);border-radius:0.6vh;z-index:99999;' +
+    "font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-weight:600;color:#fafafa;text-shadow:0 0 0.4vh #000;";
+  var title = document.createElement('div');
+  title.textContent = data.title;
+  title.style.cssText = 'font-size:2.4vh;text-align:center;margin-bottom:1vh;letter-spacing:0.05vh;';
+  menu.appendChild(title);
+  var pick = function (key) { sp.sendMessage('rpinteract:pick', key); };
+  data.actions.forEach(function (action) {
+    var button = document.createElement('div');
+    button.textContent = action.text;
+    button.style.cssText = 'font-size:1.85vh;padding:0.8vh 1.2vh;margin:0.5vh 0;cursor:pointer;border:1px solid rgba(255,255,255,0.12);' +
+      'background:rgba(255,255,255,0.04);text-align:center;';
+    button.onmouseenter = function () { button.style.background = 'rgba(255,255,255,0.16)'; };
+    button.onmouseleave = function () { button.style.background = 'rgba(255,255,255,0.04)'; };
+    button.onclick = function () { pick(action.key); };
+    menu.appendChild(button);
+  });
+  var hint = document.createElement('div');
+  hint.textContent = 'Esc to close';
+  hint.style.cssText = 'font-size:1.35vh;color:#a8a8a8;text-align:center;margin-top:0.8vh;';
+  menu.appendChild(hint);
+  document.body.appendChild(menu);
+  var onKey = function (e) {
+    if (e.key === 'Escape') {
+      document.removeEventListener('keydown', onKey);
+      sp.sendMessage('rpinteract:close');
+    }
+  };
+  document.addEventListener('keydown', onKey);
+}
+
+const INTERACT_MENU_SRC = '(' + browserInteractMenu.toString() + ')';
+
+const PLAYER_ACTIONS = [
+  { key: 'introduce', text: 'Introduce yourself' },
+  { key: 'introduceAll', text: 'Introduce yourself to everyone nearby' },
+];
+
+// Runs once per client: F1 toggles names; X on another player opens the
+// interaction menu; labels of players no longer near are hidden.
+const INPUT_EVENT_SOURCE = `try {` + NAMES_HUD_SRC + `
+  const KEY_F1 = 0x3B;
+  const KEY_X = 0x2D;
+  const MENU_SRC = ${JSON.stringify(INTERACT_MENU_SRC)};
+  const ACTIONS = ${JSON.stringify(PLAYER_ACTIONS)};
+  const sp = ctx.sp;
+  const st = shared();
+  const down = {};
+  let menuTarget = null;
+  const pressed = (key) => {
+    const isDown = sp.Input.isKeyPressed(key);
+    const was = down[key];
+    down[key] = isDown;
+    return isDown && !was;
+  };
+  const closeMenu = () => {
+    menuTarget = null;
+    sp.browser.executeJavaScript(MENU_SRC + '(null)');
+    sp.browser.setFocused(false);
+    sp.browser.executeJavaScript("window.dispatchEvent(new Event('skymp5-client:browserUnfocused'))");
+  };
+  sp.on('browserMessage', (e) => {
+    const key = e.arguments[0];
+    if (key === 'rpinteract:pick' && menuTarget !== null) {
+      ctx.sendEvent({ type: 'interact', action: e.arguments[1], target: menuTarget });
+      closeMenu();
+    } else if (key === 'rpinteract:close') {
+      closeMenu();
+    }
+  });
+  let reportAt = 0;
+  let xReports = 0;
+  sp.on('update', () => {
+    const now = Date.now();
+    try {
+      if (now >= reportAt && st.rpReports && st.rpReports.length) {
+        reportAt = now + 5000;
+        ctx.sendEvent({ type: 'report', lines: st.rpReports.splice(0, 5) });
+      }
+      // Labels of players who left (their neighbor update stopped running)
+      for (const serverId of Object.keys(st.rpSlots || {})) {
+        const seen = (st.rpSeen || {})[serverId];
+        if (!seen || now - seen.at > 300) setVisible(sp, st, st.rpSlots[serverId], false);
+      }
+      const typing = sp.browser.isFocused() || sp.Utility.isInMenuMode();
+      if (pressed(KEY_F1) && !typing) {
+        st.rpNamesHidden = !st.rpNamesHidden;
+        ctx.sendEvent({ type: 'toggleNames' });
+      }
+      if (pressed(KEY_X) && !typing && menuTarget === null) {
+        const ref = sp.Game.getCurrentCrosshairRef();
+        const serverId = ref ? ctx.getFormIdInServerFormat(ref.getFormID()) : null;
+        const seen = serverId !== null ? (st.rpSeen || {})[serverId] : null;
+        if (xReports < 5) {
+          xReports++;
+          report(st, 'x: ' + JSON.stringify({ ref: ref ? ref.getFormID().toString(16) : null, serverId,
+            seen: seen ? now - seen.at : null, seenIds: Object.keys(st.rpSeen || {}) }));
+        }
+        if (!seen || now - seen.at > 1000) return; // not a player
+        menuTarget = serverId;
+        const name = (st.rpKnown || {})[serverId];
+        sp.browser.setFocused(true);
+        sp.browser.executeJavaScript(MENU_SRC + '(' + JSON.stringify({ title: name ? name + ' (' + seen.id + ')' : seen.id, actions: ACTIONS }) + ')');
+      }
+    } catch (e) {
+      report(st, 'input: ' + (e && e.stack || e));
+    }
+  });
+  ctx.sendEvent({ type: 'report', lines: ['input: started'] });
+} catch (e) {
+  ctx.sendEvent({ type: 'report', lines: ['input: failed to start: ' + (e && e.stack || e)] });
+}
+`;
+
+// Visible by the owner too: SkyMP never sends neighbors a property its owner can't see
+mp.makeProperty('rpTag', {
+  isVisibleByOwner: true,
+  isVisibleByNeighbors: true,
+  updateOwner: '',
+  updateNeighbor: NAMES_UPDATE_NEIGHBOR,
+});
+
+mp.makeProperty('rpKnown', {
+  isVisibleByOwner: true,
+  isVisibleByNeighbors: false,
+  updateOwner: KNOWN_UPDATE_OWNER,
+  updateNeighbor: '',
+});
+
+mp.makeProperty('rpUi', {
+  isVisibleByOwner: true,
+  isVisibleByNeighbors: false,
+  updateOwner: UI_UPDATE_OWNER,
+  updateNeighbor: '',
+});
+
+mp.makeEventSource('_rpInput', INPUT_EVENT_SOURCE);
+
+mp._rpInput = (actorId, data) => {
+  try {
+    if (!data || typeof data !== 'object') return;
+    if (data.type === 'report' && Array.isArray(data.lines)) {
+      for (const line of data.lines.slice(0, 5)) console.log(`[client] ${getName(actorId)} [${getCharId(actorId)}]: ${String(line).slice(0, 800)}`);
+    } else if (data.type === 'toggleNames') {
+      const ui = mp.get(actorId, 'rpUi') || {};
+      mp.set(actorId, 'rpUi', { ...ui, namesHidden: !ui.namesHidden });
+    } else if (data.type === 'interact') {
+      if (data.action === 'introduce' && typeof data.target === 'number') introduce(actorId, data.target);
+      else if (data.action === 'introduceAll') introduceToAll(actorId);
+    }
+  } catch (e) {
+    console.error('[identity] failed to handle input', e);
+  }
 };
 
 // ---------------------------------------------------------------------------
@@ -571,6 +1057,8 @@ mp._rpChatSend = (actorId, text) => {
 
 mp._rpChatJoin = (actorId) => {
   try {
+    ensureIdentity(actorId);
+    refreshKnown(actorId);
     if (isAdmin(actorId)) {
       mp.set(actorId, 'consoleCommandsAllowed', true);
       console.log(`[numidium] ${getName(actorId)} (${actorId.toString(16)}) is an admin: dev commands and console on`);
@@ -599,6 +1087,16 @@ mp.makeProperty('rpBodyDouble', {
 mp.makeEventSource('_rpBodySave', BODY_EVENT_SOURCE);
 
 mp._rpBodySave = (actorId, data) => {
+  // RaceMenu just closed: a name typed there arrives with the appearance, around now
+  for (const delay of [500, 3000]) {
+    setTimeout(() => {
+      try {
+        ensureIdentity(actorId);
+      } catch (e) {
+        console.error('[identity] failed to update identity', e);
+      }
+    }, delay);
+  }
   try {
     const body = sanitizeBody(data);
     if (!body) {
@@ -620,3 +1118,4 @@ mp._rpBodySave = (actorId, data) => {
 hideLeftoverBodyDoubles();
 
 console.log('[numidium] gamemode loaded: roleplay chat, RaceMenu body sync');
+
