@@ -73,6 +73,10 @@ public static class SteamSkyrim
         return new Version(info.FileMajorPart, info.FileMinorPart, info.FileBuildPart, info.FilePrivatePart);
     }
 
+    /// <summary>The Steam client's own folder (where steam.exe is), or null.</summary>
+    public static string? FindSteamRoot() =>
+        SteamRoots().FirstOrDefault(root => File.Exists(Path.Combine(root, "steam.exe")));
+
     private static IEnumerable<string> SteamRoots()
     {
         // Current user first: SteamPath uses forward slashes

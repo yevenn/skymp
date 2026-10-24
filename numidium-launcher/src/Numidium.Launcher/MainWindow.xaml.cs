@@ -205,9 +205,12 @@ public partial class MainWindow : Window
                 ? ""
                 : " This isn't in a Steam library: it is only used to copy the base game from, so pick Steam's own folder.";
             if (version == SteamSkyrim.SupportedVersion)
-                SetStatus(SteamStatus, where.Length == 0 ? Good : Bad, $"Version {version}, supported.{where}");
+                SetStatus(SteamStatus, where.Length == 0 ? Good : Bad, $"Version {version}, the one Numidium runs on.{where}");
             else
-                SetStatus(SteamStatus, Bad, $"Version {version}. Numidium needs {SteamSkyrim.SupportedVersion}; downgrade the game first.{where}");
+                SetStatus(SteamStatus, where.Length == 0 ? Muted : Bad,
+                    $"Version {version}. Numidium runs on {SteamSkyrim.SupportedVersion}: Set up has Steam download that " +
+                    $"version's files for the Numidium copy (up to {BaseGame.Depots.Sum(d => d.Size) / 1e9:0} GB). " +
+                    $"Your Steam install stays as it is.{where}");
         }
 
         var copy = new GameCopy(settings.GameDir!);
@@ -218,10 +221,12 @@ public partial class MainWindow : Window
         }
         else
         {
-            var missing = copy.MissingFiles();
-            if (missing.Count > 0) SetStatus(GameStatus, Bad, $"Incomplete, missing {string.Join(", ", missing)}.");
-            else SetStatus(GameStatus, Good, $"Ready, version {SteamSkyrim.GetVersion(copy.Dir)}.");
             CopyButton.Content = "Update";
+            var missing = copy.MissingFiles();
+            if (missing.Count > 0)
+                SetStatus(GameStatus, Bad, $"Not ready: {missing.Count} base game files aren't Skyrim {SteamSkyrim.SupportedVersion}'s, " +
+                                           $"or changed since they were checked. {CopyButton.Content} checks them and fetches what's missing.");
+            else SetStatus(GameStatus, Good, $"Ready, version {SteamSkyrim.GetVersion(copy.Dir)}.");
         }
 
         var installed = ClientPackage.ReadInstalled(copy.Dir);
@@ -308,15 +313,12 @@ public partial class MainWindow : Window
         {
             var copy = new GameCopy(settings.GameDir!);
             var source = settings.SteamGameDir!;
-            Log($"Copying the base game from {source} to {copy.Dir}...");
-            var progress = new Progress<GameCopy.Progress>(p =>
-            {
-                CopyProgress.Maximum = Math.Max(1, p.Total);
-                CopyProgress.Value = p.Done;
-            });
-            var result = await Task.Run(() => copy.Update(source, progress));
+            Log($"Checking the base game in {copy.Dir} and copying what it lacks from {source}...");
+            var result = await Task.Run(() => copy.Update(source, CopyProgressReporter()));
             Log($"Base game: {result.Copied} copied ({result.BytesWritten / (1024 * 1024)} MB), " +
-                $"{result.Linked} hard-linked, {result.Unchanged} already up to date.");
+                $"{result.Linked} hard-linked, {result.Unchanged} already right.");
+            var depots = result.Depots();
+            if (depots.Count > 0 && !await FetchFromSteamAsync(copy, source, depots)) return;
 
             if (!Skse.IsInstalled(copy.Dir))
             {
@@ -357,13 +359,89 @@ public partial class MainWindow : Window
         }
     }
 
+    private IProgress<GameCopy.Progress> CopyProgressReporter() => new Progress<GameCopy.Progress>(p =>
+    {
+        CopyProgress.Maximum = Math.Max(1, p.Total);
+        CopyProgress.Value = p.Done;
+    });
+
+    /// <summary>
+    /// Has Steam download <paramref name="depots"/>, those with base game files the
+    /// Steam install doesn't have in 1.6.1170's version, and moves those files into
+    /// the copy. Returns false when the player declines or it fails.
+    /// </summary>
+    private async Task<bool> FetchFromSteamAsync(GameCopy copy, string source,
+        List<(BaseGame.Depot Depot, List<BaseGame.Entry> Files)> depots)
+    {
+        string Gb(long bytes) => $"{bytes / 1e9:0.0} GB";
+        var what = string.Join(", ", depots.Select(d => $"{d.Depot.Contents} ({Gb(d.Depot.Size)})"));
+        Log($"{depots.Sum(d => d.Files.Count(f => !f.Optional))} base game files aren't Skyrim {SteamSkyrim.SupportedVersion}'s in the Steam install " +
+            $"(version {SteamSkyrim.GetVersion(source)}). Steam can download them: {what}.");
+
+        var steamRoot = SteamSkyrim.FindSteamRoot();
+        if (steamRoot == null)
+        {
+            Log("The Steam client wasn't found, so it can't download them.");
+            return false;
+        }
+        var answer = MessageBox.Show(this,
+            $"Numidium runs on Skyrim {SteamSkyrim.SupportedVersion}, and your Steam install is version {SteamSkyrim.GetVersion(source)}.\n\n" +
+            $"The launcher will ask Steam to download {SteamSkyrim.SupportedVersion}'s {what} " +
+            $"and move them into the Numidium copy. Your Steam install stays as it is.\n\n" +
+            "Steam's console will open; keep Steam open and signed in until it's done. Continue?",
+            "Download Skyrim 1.6.1170", MessageBoxButton.OKCancel, MessageBoxImage.Question);
+        if (answer != MessageBoxResult.OK)
+        {
+            Log("Not downloaded; the Numidium copy can't be played until it is.");
+            return false;
+        }
+
+        foreach (var (depot, files) in depots)
+        {
+            var dir = SteamDepots.ContentDir(steamRoot, depot.Id);
+            if (Directory.Exists(dir) && await Task.Run(() => copy.DepotHas(dir, files, CopyProgressReporter())))
+            {
+                Log($"Steam already downloaded {depot.Contents}.");
+            }
+            else
+            {
+                Log($"Asking Steam for {depot.Contents} ({SteamDepots.Command(depot)})...");
+                string? lastMessage = null;
+                var status = new Progress<SteamDepots.Status>(s =>
+                {
+                    CopyProgress.Maximum = Math.Max(1, s.Total);
+                    CopyProgress.Value = s.Bytes;
+                    if (s.Message != lastMessage) Log(lastMessage = s.Message);
+                });
+                dir = await Task.Run(() => SteamDepots.DownloadAsync(steamRoot, depot, d => copy.DepotHas(d, files), status));
+            }
+            Log($"Moving {files.Count} files of {depot.Contents} into the Numidium copy...");
+            await Task.Run(() => copy.InstallFromDepot(dir, files, CopyProgressReporter()));
+            SteamDepots.Remove(dir);
+        }
+
+        var missing = copy.MissingFiles();
+        if (missing.Count > 0)
+        {
+            Log($"Still not Skyrim {SteamSkyrim.SupportedVersion}'s: {string.Join(", ", missing)}.");
+            return false;
+        }
+        Log($"The Numidium copy is Skyrim {SteamSkyrim.GetVersion(copy.Dir)}.");
+        return true;
+    }
+
     private async void Play_Click(object sender, RoutedEventArgs e)
     {
         if (!ReadServerFields(out var host, out var port, out var profileId)) return;
         var copy = new GameCopy(settings.GameDir!);
-        if (!copy.Exists || copy.MissingFiles().Count > 0)
+        if (!copy.Exists)
         {
             Log("Set up the Numidium game folder first.");
+            return;
+        }
+        if (copy.MissingFiles().Count > 0)
+        {
+            Log($"Click Update first: the base game in {copy.Dir} needs checking.");
             return;
         }
         busy = true;
