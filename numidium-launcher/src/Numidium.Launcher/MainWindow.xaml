@@ -89,25 +89,33 @@
             </Border>
 
             <Border DockPanel.Dock="Top" Style="{StaticResource Card}">
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="90"/>
-                        <ColumnDefinition Width="110"/>
-                    </Grid.ColumnDefinitions>
-                    <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                        <TextBlock Style="{StaticResource Heading}" Text="SERVER"/>
-                        <TextBox x:Name="HostBox"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="1" Margin="0,0,8,0">
-                        <TextBlock Style="{StaticResource Heading}" Text="PORT"/>
-                        <TextBox x:Name="PortBox"/>
-                    </StackPanel>
-                    <StackPanel Grid.Column="2">
-                        <TextBlock Style="{StaticResource Heading}" Text="PROFILE (DEV)"/>
-                        <TextBox x:Name="ProfileBox" ToolTip="Only offline test servers use this"/>
-                    </StackPanel>
-                </Grid>
+                <StackPanel>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="90"/>
+                            <ColumnDefinition Width="110"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0" Margin="0,0,8,0">
+                            <TextBlock Style="{StaticResource Heading}" Text="SERVER"/>
+                            <TextBox x:Name="HostBox"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Margin="0,0,8,0">
+                            <TextBlock Style="{StaticResource Heading}" Text="PORT"/>
+                            <TextBox x:Name="PortBox"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="2">
+                            <TextBlock Style="{StaticResource Heading}" Text="PROFILE (DEV)"/>
+                            <TextBox x:Name="ProfileBox" ToolTip="Only offline test servers use this; servers with Discord sign-in ignore it"/>
+                        </StackPanel>
+                    </Grid>
+                    <DockPanel Margin="0,8,0,0">
+                        <Button x:Name="SignInButton" DockPanel.Dock="Right" Content="Sign in with Discord" Margin="8,0,0,0"
+                                Click="SignIn_Click" ToolTip="Opens Discord in your browser; the server only learns your Discord id and name"/>
+                        <TextBlock x:Name="AccountStatus" VerticalAlignment="Center" TextWrapping="Wrap" Foreground="{StaticResource Muted}"
+                                   Text="Play asks the server whether it needs a Discord sign-in."/>
+                    </DockPanel>
+                </StackPanel>
             </Border>
 
             <Button x:Name="PlayButton" DockPanel.Dock="Bottom" Content="Play" FontSize="18" FontWeight="SemiBold" Padding="0,10"

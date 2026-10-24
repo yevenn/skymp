@@ -540,7 +540,16 @@ public partial class MainWindow : Window
                 if (problems.Count > 15) Log($"  ...and {problems.Count - 15} more");
                 return;
             }
-            ClientSettings.Write(copy.Dir, host, port, profileId);
+            if (manifest.UsesDiscordSignIn)
+            {
+                var session = await EnsureSignedInAsync(host, manifest);
+                if (session == null) return;
+                ClientSettings.Write(copy.Dir, host, port, session: session);
+            }
+            else
+            {
+                ClientSettings.Write(copy.Dir, host, port, profileId);
+            }
             Log($"{manifest.Plugins.Count} plugins match. Connecting to {host}:{port}.");
             await GameRunner.RunAsync(copy.Dir, manifest.Plugins.Select(p => p.FileName), Log);
         }
@@ -556,6 +565,84 @@ public partial class MainWindow : Window
         {
             busy = false;
             RefreshStatus();
+        }
+    }
+
+    /// <summary>The session to play on <paramref name="host"/> with: the saved one if
+    /// the server still knows it, else a new Discord sign-in. Null if that fails.</summary>
+    private async Task<string?> EnsureSignedInAsync(string host, ServerManifest manifest)
+    {
+        var baseUrl = ServerManifest.BaseUrl(host);
+        if (settings.GetSession(host) is string saved)
+        {
+            var signedIn = await DiscordSignIn.CheckAsync(Http, baseUrl, saved);
+            if (signedIn != null)
+            {
+                ShowAccount($"Signed in as {signedIn.Username}.", Good);
+                return saved;
+            }
+            Log("The server's Discord sign-in expired; signing in again.");
+            settings.SetSession(host, null);
+            settings.Save();
+        }
+        return await SignInAsync(host, manifest.Auth!);
+    }
+
+    /// <summary>Signs in to <paramref name="host"/> with Discord and saves the session.</summary>
+    private async Task<string?> SignInAsync(string host, ServerManifest.ServerAuth auth)
+    {
+        var state = DiscordSignIn.NewState();
+        using var cancel = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        try
+        {
+            var waiting = DiscordSignIn.WaitForCodeAsync(auth.RedirectUri, state, cancel.Token);
+            Log("Opening Discord in your browser to sign in...");
+            ShowAccount("Waiting for Discord in your browser...", Muted);
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(DiscordSignIn.AuthorizeUrl(auth, state)) { UseShellExecute = true });
+            var code = await waiting;
+            var signedIn = await DiscordSignIn.ExchangeAsync(Http, ServerManifest.BaseUrl(host), code, auth.RedirectUri);
+            settings.SetSession(host, signedIn.Session);
+            settings.Save();
+            Log($"Signed in to {host} as {signedIn.Username}.");
+            ShowAccount($"Signed in as {signedIn.Username}.", Good);
+            return signedIn.Session;
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or InvalidOperationException or InvalidDataException or HttpRequestException)
+        {
+            var reason = cancel.IsCancellationRequested ? "no answer from Discord within 5 minutes" : ex.Message;
+            Log($"Not signed in: {reason}");
+            ShowAccount("Not signed in.", Bad);
+            return null;
+        }
+    }
+
+    private void ShowAccount(string text, Brush brush) => SetStatus(AccountStatus, brush, text);
+
+    private async void SignIn_Click(object sender, RoutedEventArgs e)
+    {
+        if (!ReadServerFields(out var host, out _, out _)) return;
+        SignInButton.IsEnabled = false;
+        try
+        {
+            var manifest = await ServerManifest.FetchAsync(host);
+            if (!manifest.UsesDiscordSignIn)
+            {
+                ShowAccount("This server doesn't use Discord sign-in (a dev server: it uses the profile number).", Muted);
+                return;
+            }
+            if (settings.GetSession(host) is string old)
+            {
+                try { await DiscordSignIn.SignOutAsync(Http, ServerManifest.BaseUrl(host), old); } catch (HttpRequestException) { }
+            }
+            await SignInAsync(host, manifest.Auth!);
+        }
+        catch (HttpRequestException ex)
+        {
+            Log($"Couldn't reach the server: {ex.Message}");
+        }
+        finally
+        {
+            SignInButton.IsEnabled = true;
         }
     }
 

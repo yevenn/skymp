@@ -66,6 +66,7 @@ const translations = {
     oops: 'упс',
     join: 'вступить',
     back: 'назад',
+    signInAgain: 'вход истёк\nзакройте игру и войдите снова\nв лаунчере Numidium',
   },
   "en": {
     loginViaDiscord: 'log in via Discord',
@@ -92,6 +93,7 @@ const translations = {
     oops: 'oops',
     join: 'join',
     back: 'back',
+    signInAgain: 'your sign-in expired\nclose the game and sign in again\nin the Numidium launcher',
   },
 } as const;
 
@@ -130,9 +132,21 @@ export class AuthService extends ClientListener {
 
     const settingsGameData = this.sp.settings["skymp5-client"]["gameData"] as any;
     const isOfflineMode = Number.isInteger(settingsGameData?.profileId);
+    // Numidium's launcher signs the player in with Discord and writes the server's session here
+    const launcherSession = typeof settingsGameData?.session === "string" && settingsGameData.session ? settingsGameData.session as string : null;
     if (isOfflineMode) {
       logTrace(this, `Offline mode detected in settings, emitting auth event with authGameData.local`);
       this.controller.emitter.emit("authAttempt", { authGameData: { local: { profileId: settingsGameData.profileId } } });
+    } else if (launcherSession) {
+      logTrace(this, `Session from the launcher found in settings, emitting auth event with authGameData.remote`);
+      const remote: RemoteAuthGameData = {
+        session: launcherSession,
+        masterApiId: 0,
+        discordUsername: null,
+        discordDiscriminator: null,
+        discordAvatar: null,
+      };
+      this.controller.emitter.emit("authAttempt", { authGameData: { remote } });
     } else {
       logTrace(this, `No offline mode detectted in settings, regular auth needed`);
       this.setListenBrowserMessage(true, 'authNeeded event received');
@@ -216,6 +230,16 @@ export class AuthService extends ClientListener {
         browserState.loginFailedReason = strings.banned;
         browserState.comment = '';
         this.setListenBrowserMessage(true, 'loginFailedBanned received');
+        this.loggingStartMoment = 0;
+        this.sp.browser.executeJavaScript(new FunctionInfo(this.loginFailedWidgetSetter).getText({ events, browserState, authData: authData, strings }));
+        break;
+      case 'loginFailedSessionNotFound':
+        this.authAttemptProgressIndicator = false;
+        this.controller.lookupListener(NetworkingService).close();
+        logTrace(this, 'loginFailedSessionNotFound received');
+        browserState.loginFailedReason = strings.signInAgain;
+        browserState.comment = '';
+        this.setListenBrowserMessage(true, 'loginFailedSessionNotFound received');
         this.loggingStartMoment = 0;
         this.sp.browser.executeJavaScript(new FunctionInfo(this.loginFailedWidgetSetter).getText({ events, browserState, authData: authData, strings }));
         break;

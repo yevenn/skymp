@@ -14,8 +14,10 @@ public static class ClientSettings
         Path.Combine(gameDir, "Data", "Platform", "Plugins", "skymp5-client-settings.txt");
 
     /// <summary>Points the client at a server, keeping any other settings in the file.
-    /// <paramref name="profileId"/> is for offline (dev) servers, which trust it.</summary>
-    public static void Write(string gameDir, string host, int port, int? profileId = null)
+    /// <paramref name="session"/> is the server's Discord sign-in session;
+    /// <paramref name="profileId"/> is for offline (dev) servers, which trust it.
+    /// Whichever is given replaces the other.</summary>
+    public static void Write(string gameDir, string host, int port, int? profileId = null, string? session = null)
     {
         var path = PathIn(gameDir);
         var settings = File.Exists(path) && JsonNode.Parse(File.ReadAllText(path)) is JsonObject existing
@@ -23,10 +25,13 @@ public static class ClientSettings
             : new JsonObject();
         settings["server-ip"] = host;
         settings["server-port"] = port;
-        if (profileId is int id)
+        if (session != null || profileId != null)
         {
             var gameData = settings["gameData"] as JsonObject ?? new JsonObject();
-            gameData["profileId"] = id;
+            gameData.Remove("profileId");
+            gameData.Remove("session");
+            if (session != null) gameData["session"] = session;
+            else gameData["profileId"] = profileId;
             settings["gameData"] = gameData;
         }
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);

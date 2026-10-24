@@ -20,6 +20,7 @@ import { System } from "./systems/system";
 import { MasterClient } from "./systems/masterClient";
 import { Spawn } from "./systems/spawn";
 import { Login } from "./systems/login";
+import { getNumidiumAccounts } from "./systems/numidiumAuth";
 import { DiscordBanSystem } from "./systems/discordBanSystem";
 import { MasterApiBalanceSystem } from "./systems/masterApiBalanceSystem";
 import { EventEmitter } from "events";
@@ -189,10 +190,19 @@ const main = async () => {
   } = settingsObject;
 
   const log = console.log;
+  // With Numidium's own Discord sign-in, SkyMP's master server isn't used at all
+  // (an empty "master" setting falls back to SkyMP's), so the server isn't listed there
+  const ownSignIn = !offlineMode && getNumidiumAccounts(settingsObject.allSettings?.numidiumAuth) !== null;
+  if (!offlineMode && settingsObject.allSettings?.numidiumAuth && !ownSignIn) {
+    // Half set up (say, no secret yet): falling back to SkyMP's master would list the server there
+    console.error("numidiumAuth is incomplete (see the errors above); not starting an online server without it");
+    process.exit(-1);
+  }
+  if (ownSignIn) log("Players sign in with Numidium's Discord sign-in");
   const systems = new Array<System>();
   systems.push(
     new MetricsSystem(),
-    new MasterClient(log, port, master, maxPlayers, name, masterKey, 5000, offlineMode),
+    new MasterClient(log, port, ownSignIn ? null : master, maxPlayers, name, masterKey, 5000, offlineMode),
     new Spawn(log),
     new Login(log, maxPlayers, master, port, masterKey, offlineMode),
     new DiscordBanSystem(),

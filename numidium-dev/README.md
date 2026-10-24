@@ -18,6 +18,44 @@ the repo is at `E:\Jarldom\skymp` and the test game copy at `E:\Jarldom\SkyrimDe
 | `release.ps1` | run from a clean, pushed commit | Packages the client, builds the launcher with the same version and gathers the release's five files in `build\numidium-release\<version>`; `-Publish` creates the GitHub release through the GitHub CLI |
 | `patch-racemenu-height.py` | run with the game's `Data` folder | Limits RaceMenu's Height slider to 0.95–1.05 by patching the installed `RaceMenu.bsa`'s slider script into a loose `Scripts\racemenuplugin.pex` (players patch their own copy; no modified RaceMenu file is shipped). The server clamps height to the same range either way |
 
+## Discord sign-in (servers for players)
+
+The settings above are an offline dev server: anyone can play as any profile
+number. A server for players signs them in with Discord instead, through a
+Discord application of our own (not SkyMP's master server):
+
+1. At https://discord.com/developers/applications, create an application
+   ("Numidium"). Under **OAuth2**, copy the **Client ID**, reset and copy the
+   **Client Secret**, and add the redirect `http://127.0.0.1:53134/callback`
+   (the launcher receives Discord's answer there, on the player's own PC).
+2. In `build/dist/server/server-settings.json` (gitignored; never put the secret
+   in this repo), set `"offlineMode": false`, `"enableConsoleCommandsForAll": false`
+   and add:
+   ```json
+   "numidiumAuth": {
+     "discordClientId": "<Client ID>",
+     "discordClientSecret": "<Client Secret>",
+     "redirectPort": 53134,
+     "sessionDays": 30,
+     "admins": ["<your Discord user id>"],
+     "profiles": { "<a Discord user id>": 1 }
+   }
+   ```
+   `admins` get `/double`, `/racemenu` and the game console. `profiles` keeps
+   characters made on the dev server (profile 1, 2, 3...) for their players; new
+   players get profiles from 100 up. Discord user ids: Discord's Settings >
+   Advanced > Developer Mode, then right-click a name > Copy User ID.
+3. Restart the server. Its `manifest.json` now tells the launcher to sign in:
+   Play (or Sign in with Discord) opens Discord in the browser, the server trades
+   the code for the player's Discord id and returns a 30-day session, which the
+   launcher keeps encrypted for that Windows user and gives the game. Accounts and
+   sessions (hashed) are in `numidium-accounts.json` next to the server.
+4. Players outside your network need TCP 3000 and UDP 7777 forwarded to this PC on
+   the router, and connect to your public address. Port 53134 stays local.
+
+The server and launcher speak plain HTTP on port 3000, so sign-in codes and
+sessions cross the network unencrypted; put HTTPS in front before it matters.
+
 ## Character customization
 
 Installed in the test copy by `install-mods.ps1`, downloaded from Nexus by hand:

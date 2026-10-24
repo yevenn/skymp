@@ -274,12 +274,12 @@ const handleChat = (actorId, rawText) => {
   const args = spaceIndex === -1 ? '' : text.slice(spaceIndex + 1).trim();
 
   if (IGNORED_COMMANDS.has(name)) return;
-  if (name === 'double' && devCommandsEnabled()) {
+  if (name === 'double' && devCommandsEnabled(actorId)) {
     toggleBodyDouble(actorId);
     return;
   }
   // Reopens character creation (RaceMenu) for your existing character
-  if (name === 'racemenu' && devCommandsEnabled()) {
+  if (name === 'racemenu' && devCommandsEnabled(actorId)) {
     mp.setRaceMenuOpen(actorId, true);
     return;
   }
@@ -511,7 +511,16 @@ const hideLeftoverBodyDoubles = () => {
   if (hidden) console.log(`[body] hid ${hidden} body double(s) left showing`);
 };
 
-const devCommandsEnabled = () => mp.getServerSettings().enableConsoleCommandsForAll === true;
+// Dev commands (/double, /racemenu) and the game console: for everyone on a dev
+// server (enableConsoleCommandsForAll), otherwise for the Discord ids listed in
+// numidiumAuth.admins
+const isAdmin = (actorId) => {
+  const admins = (mp.getServerSettings().numidiumAuth || {}).admins;
+  const discordId = mp.get(actorId, 'private.indexed.discordId');
+  return Array.isArray(admins) && typeof discordId === 'string' && admins.includes(discordId);
+};
+
+const devCommandsEnabled = (actorId) => mp.getServerSettings().enableConsoleCommandsForAll === true || isAdmin(actorId);
 
 const toggleBodyDouble = (actorId) => {
   let doubleId = mp.get(actorId, 'rpBodyDouble');
@@ -562,6 +571,10 @@ mp._rpChatSend = (actorId, text) => {
 
 mp._rpChatJoin = (actorId) => {
   try {
+    if (isAdmin(actorId)) {
+      mp.set(actorId, 'consoleCommandsAllowed', true);
+      console.log(`[numidium] ${getName(actorId)} (${actorId.toString(16)}) is an admin: dev commands and console on`);
+    }
     system(actorId, `Welcome to Numidium, ${getName(actorId)}. Press Enter to chat, /help for commands.`);
   } catch (e) {
     console.error('[chat] failed to greet player', e);

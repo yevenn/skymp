@@ -17,6 +17,35 @@ public sealed class LauncherSettings
     /// <summary>Where the player's browser saves Nexus downloads.</summary>
     public string? DownloadsDir { get; set; }
 
+    /// <summary>Discord sign-in sessions by server address, encrypted for this Windows
+    /// user (DPAPI): each lets its holder play as the player on that server.</summary>
+    public Dictionary<string, string> Sessions { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public string? GetSession(string server)
+    {
+        if (!Sessions.TryGetValue(server, out var stored)) return null;
+        try
+        {
+            return System.Text.Encoding.UTF8.GetString(System.Security.Cryptography.ProtectedData.Unprotect(
+                Convert.FromBase64String(stored), null, System.Security.Cryptography.DataProtectionScope.CurrentUser));
+        }
+        catch (Exception ex) when (ex is FormatException or System.Security.Cryptography.CryptographicException)
+        {
+            return null; // another Windows user's, or damaged: sign in again
+        }
+    }
+
+    public void SetSession(string server, string? session)
+    {
+        if (session == null)
+        {
+            Sessions.Remove(server);
+            return;
+        }
+        Sessions[server] = Convert.ToBase64String(System.Security.Cryptography.ProtectedData.Protect(
+            System.Text.Encoding.UTF8.GetBytes(session), null, System.Security.Cryptography.DataProtectionScope.CurrentUser));
+    }
+
     /// <summary>Where the newest GitHub release is mirrored (<see cref="Releases"/>).</summary>
     public static string ReleaseDir =>
         Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Numidium", "Release");

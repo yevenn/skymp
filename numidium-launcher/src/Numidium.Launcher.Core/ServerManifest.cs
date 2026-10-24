@@ -18,19 +18,42 @@ public sealed class ServerManifest
         [property: JsonPropertyName("crc32")] long Crc32,
         [property: JsonPropertyName("isLight")] bool IsLight);
 
-    private sealed record Document([property: JsonPropertyName("mods")] List<Plugin> Mods);
+    /// <summary>How players sign in: Numidium's Discord sign-in ("discord"). Servers
+    /// without it are offline (dev) servers, which trust a profile number.</summary>
+    public sealed record ServerAuth(
+        [property: JsonPropertyName("type")] string Type,
+        [property: JsonPropertyName("discordClientId")] string DiscordClientId,
+        [property: JsonPropertyName("redirectUri")] string RedirectUri);
+
+    private sealed record Document(
+        [property: JsonPropertyName("mods")] List<Plugin> Mods,
+        [property: JsonPropertyName("auth")] ServerAuth? Auth);
 
     public List<Plugin> Plugins { get; }
 
-    private ServerManifest(List<Plugin> plugins) => Plugins = plugins;
+    public ServerAuth? Auth { get; }
 
-    public static ServerManifest Parse(string json) =>
-        new(JsonSerializer.Deserialize<Document>(json)?.Mods ?? throw new FormatException("manifest.json has no mods"));
+    public bool UsesDiscordSignIn => Auth is { Type: "discord" };
+
+    private ServerManifest(List<Plugin> plugins, ServerAuth? auth)
+    {
+        Plugins = plugins;
+        Auth = auth;
+    }
+
+    public static ServerManifest Parse(string json)
+    {
+        var document = JsonSerializer.Deserialize<Document>(json);
+        return new(document?.Mods ?? throw new FormatException("manifest.json has no mods"), document.Auth);
+    }
+
+    /// <summary>The server's resources address, where manifest.json and sign-in live.</summary>
+    public static string BaseUrl(string host, int resourcesPort = ResourcesPort) => $"http://{host}:{resourcesPort}";
 
     public static async Task<ServerManifest> FetchAsync(string host, int resourcesPort = ResourcesPort, CancellationToken cancel = default)
     {
         using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
-        var json = await http.GetStringAsync($"http://{host}:{resourcesPort}/manifest.json", cancel);
+        var json = await http.GetStringAsync($"{BaseUrl(host, resourcesPort)}/manifest.json", cancel);
         return Parse(json);
     }
 

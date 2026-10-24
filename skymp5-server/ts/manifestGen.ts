@@ -2,6 +2,7 @@ import { Settings } from "./settings";
 import * as crc32 from "crc-32";
 import * as path from "path";
 import * as fs from "fs";
+import { getNumidiumAccounts } from "./systems/numidiumAuth";
 
 interface ManifestModEntry {
   filename: string;
@@ -30,6 +31,8 @@ interface Manifest {
   versionMajor: number;
   mods: Array<ManifestModEntry>;
   loadOrder: Array<string>;
+  // How the launcher signs players in, when the server has Numidium's Discord sign-in
+  auth?: { type: string; discordClientId: string; redirectUri: string };
 }
 
 const getBsaNameByEspmName = (espmName: string) => {
@@ -75,6 +78,11 @@ export const generateManifest = (settings: Settings): void => {
       });
     }
   });
+
+  const accounts = settings.offlineMode ? null : getNumidiumAccounts(settings.allSettings?.numidiumAuth);
+  if (accounts) {
+    manifest.auth = accounts.publicInfo;
+  }
 
   const manifestPath = path.join(settings.dataDir, "manifest.json");
   fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 4));

@@ -2,6 +2,7 @@ import { System, Log, Content, SystemContext } from "./system";
 import { Settings } from "../settings";
 import * as fetchRetry from "fetch-retry";
 import { loginsCounter, loginErrorsCounter } from "./metricsSystem";
+import { getNumidiumAccounts } from "./numidiumAuth";
 
 const loginFailedNotInTheDiscordServer = JSON.stringify({ customPacketType: "loginFailedNotInTheDiscordServer" });
 const loginFailedBanned = JSON.stringify({ customPacketType: "loginFailedBanned" });
@@ -49,6 +50,17 @@ export class Login implements System {
   }
 
   private async getUserProfile(session: string, userId: number, ctx: SystemContext): Promise<UserProfile> {
+    // Numidium's own Discord sign-in: the session is one this server handed out
+    const accounts = getNumidiumAccounts(this.settingsObject.allSettings?.numidiumAuth);
+    if (accounts) {
+      const signedIn = accounts.resolve(session);
+      if (!signedIn) {
+        ctx.svr.sendCustomPacket(userId, loginFailedSessionNotFound);
+        throw new Error("getUserProfile: unknown or expired Numidium session");
+      }
+      return { id: signedIn.profileId, discordId: signedIn.discordId };
+    }
+
     const response = await this.fetchRetry(
       `${this.masterUrl}/api/servers/${this.masterKey}/sessions/${session}`,
       this.getFetchOptions('getUserProfile')

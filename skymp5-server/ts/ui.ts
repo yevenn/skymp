@@ -9,8 +9,53 @@ import { Settings } from "./settings";
 import Axios from "axios";
 import { AddressInfo } from "net";
 import { register, getAggregatedMetrics, rpcCallsCounter, rpcDurationHistogram } from "./systems/metricsSystem";
+import { AuthError, NumidiumAccounts, getNumidiumAccounts } from "./systems/numidiumAuth";
 
 let gScampServer: any = null;
+
+let gAccounts: NumidiumAccounts | null = null;
+
+const bearer = (ctx: any): string | null => {
+  const header = ctx.get("Authorization") as string;
+  return header && header.startsWith("Bearer ") ? header.slice("Bearer ".length).trim() : null;
+};
+
+// The launcher's side of Numidium's Discord sign-in (see numidiumAuth.ts)
+const addAuthRoutes = (router: any) => {
+  router.post("/auth/discord", async (ctx: any) => {
+    if (!gAccounts) return ctx.throw(404);
+    const { code, redirectUri } = ctx.request.body || {};
+    if (typeof code !== "string" || typeof redirectUri !== "string") {
+      ctx.status = 400;
+      ctx.body = { error: "code and redirectUri are required" };
+      return;
+    }
+    try {
+      ctx.body = await gAccounts.signIn(code, redirectUri);
+    } catch (e: any) {
+      console.error(`[auth] sign-in from ${ctx.request.ip} failed: ${e?.message}`);
+      ctx.status = e instanceof AuthError ? e.status : 500;
+      ctx.body = { error: e instanceof AuthError ? e.message : "sign-in failed" };
+    }
+  });
+
+  router.get("/auth/session", (ctx: any) => {
+    if (!gAccounts) return ctx.throw(404);
+    const signedIn = gAccounts.resolve(bearer(ctx));
+    if (!signedIn) {
+      ctx.status = 401;
+      ctx.body = { error: "not signed in, or the session expired" };
+      return;
+    }
+    ctx.body = signedIn;
+  });
+
+  router.post("/auth/signout", (ctx: any) => {
+    if (!gAccounts) return ctx.throw(404);
+    gAccounts.signOut(bearer(ctx));
+    ctx.body = {};
+  });
+};
 
 let metricsAuth: { user: string; password: string } | null = null;
 
@@ -65,6 +110,8 @@ const createApp = (getOriginPort: () => number) => {
     }
   });
 
+  addAuthRoutes(router);
+
   router.use('/metrics', (ctx: any, next: any) => {
     console.log(`Metrics requested by ${ctx.request.ip}`);
     return next();
@@ -96,6 +143,7 @@ export const setServer = (scampServer: any) => {
 
 export const main = (settings: Settings): void => {
   metricsAuthParse(settings);
+  gAccounts = settings.offlineMode ? null : getNumidiumAccounts(settings.allSettings?.numidiumAuth);
   const devServerPort = 1234;
 
   const uiListenHost = settings.allSettings.uiListenHost as (string | undefined);
