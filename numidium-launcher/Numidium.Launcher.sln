@@ -11,6 +11,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numidium.Launcher", "src\Nu
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numidium.Launcher.Tests", "tests\Numidium.Launcher.Tests\Numidium.Launcher.Tests.csproj", "{77F65E55-A10D-4057-B164-4A60A9EA2423}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Numidium.ModList", "src\Numidium.ModList\Numidium.ModList.csproj", "{005E4959-D081-4CDA-BA84-327B9C1C0E1E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -57,6 +59,18 @@ Global
 		{77F65E55-A10D-4057-B164-4A60A9EA2423}.Release|x64.Build.0 = Release|Any CPU
 		{77F65E55-A10D-4057-B164-4A60A9EA2423}.Release|x86.ActiveCfg = Release|Any CPU
 		{77F65E55-A10D-4057-B164-4A60A9EA2423}.Release|x86.Build.0 = Release|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Debug|x64.Build.0 = Debug|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Debug|x86.Build.0 = Debug|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Release|x64.ActiveCfg = Release|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Release|x64.Build.0 = Release|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Release|x86.ActiveCfg = Release|Any CPU
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -65,5 +79,6 @@ Global
 		{82EC13A6-DC76-45DC-B465-03AAD2B15C76} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{1ACB55BD-B92B-4AF6-B863-A3566BE56110} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 		{77F65E55-A10D-4057-B164-4A60A9EA2423} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
+		{005E4959-D081-4CDA-BA84-327B9C1C0E1E} = {827E0CD3-B72D-47B6-A68D-7590B98EB39B}
 	EndGlobalSection
 EndGlobal

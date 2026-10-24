@@ -104,6 +104,31 @@ public static class Fomod
         return placements;
     }
 
+    /// <summary>One option of an installer: its page, group, the group's rule
+    /// (SelectExactlyOne, SelectAny, SelectAll...), its index in the group and its type
+    /// without flags (Required, Optional, Recommended, NotUsable...).</summary>
+    public sealed record Option(string Step, string Group, string GroupType, string Name, int Index, string Type);
+
+    /// <summary>Every option of every page, whatever the page's visibility conditions.</summary>
+    public static List<Option> Options(string moduleConfigXml)
+    {
+        var config = XDocument.Parse(moduleConfigXml).Root ?? throw new InvalidDataException("ModuleConfig.xml is empty");
+        var options = new List<Option>();
+        foreach (var step in Children(Child(config, "installSteps"), "installStep"))
+            foreach (var group in Children(Child(step, "optionalFileGroups"), "group"))
+            {
+                var index = 0;
+                foreach (var plugin in Children(Child(group, "plugins"), "plugin"))
+                    options.Add(new Option(Attr(step, "name"), Attr(group, "name"), Attr(group, "type"), Attr(plugin, "name"), index++,
+                        PluginType(plugin, new Dictionary<string, string>(), null)));
+            }
+        return options;
+    }
+
+    /// <summary>Whether <paramref name="option"/> is <paramref name="choice"/>, as Plan matches them.</summary>
+    public static bool Matches(Option option, Collection.FomodChoice choice) =>
+        Same(option.Step, choice.Step) && Same(option.Group, choice.Group) && Same(option.Name, choice.Option);
+
     private static string PluginType(XElement plugin, Dictionary<string, string> flags, Func<string, bool>? installedFiles)
     {
         var descriptor = Child(plugin, "typeDescriptor");

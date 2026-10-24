@@ -18,6 +18,32 @@ the repo is at `E:\Jarldom\skymp` and the test game copy at `E:\Jarldom\SkyrimDe
 | `release.ps1` | run from a clean, pushed commit | Packages the client, builds the launcher with the same version and gathers the release's six files in `build\numidium-release\<version>`; `-Publish` creates the GitHub release through the GitHub CLI |
 | `patch-racemenu-height.py` | run with the game's `Data` folder | Limits RaceMenu's Height slider to 0.95–1.05 by patching the installed `RaceMenu.bsa`'s slider script into a loose `Scripts\racemenuplugin.pex` (players patch their own copy; no modified RaceMenu file is shipped). The server clamps height to the same range either way |
 
+## Changing the mod list (without Vortex)
+
+`collection.json` here is the mod list players install; a release carries it to
+them. Change it with `numidium-modlist` (in `numidium-launcher/src/Numidium.ModList`;
+`dotnet run --project numidium-launcher/src/Numidium.ModList -- <command>`, or the
+built `numidium-modlist.exe`), never through Vortex, which would deploy into the
+Steam game folder:
+
+- `check`: which mods have a newer file on Nexus, or are gone from it. SKSE plugins
+  updated since August 2026 are often for Skyrim 1.7 only: check the file says
+  1.6.1170 first.
+- `add <archive>`: downloads come from the mod's Nexus Files tab as usual (Manual
+  download). The tool reads the mod id from the file name, finds the exact Nexus file
+  through Nexus's public API, and computes the MD5 from the archive. An archive of a
+  file already listed under the same title is an update: it replaces that entry in
+  place, keeps its installer choices and moves its rules to the new file. Archives
+  with an installer need `--choice "Page|Group|Option"` (`options <archive>` lists
+  them; an update keeps the earlier ones). `--after`/`--before <mod>` sets which
+  mod's files win, `--optional` marks it skippable, `--dry-run` writes nothing.
+  It lists the plugins the mod installs: new ones go at the end of `loadOrder`
+  in `server-settings.json` and in `skyrimdev-plugins.txt` (the list only grows).
+- `remove <mod>`, `after <mod> <other mod>`, `list`.
+
+The Nexus collection page isn't updated by this. Players don't need it (the
+launcher links each mod's own page), so it can stay as it is.
+
 ## Discord sign-in (servers for players)
 
 The settings above are an offline dev server: anyone can play as any profile

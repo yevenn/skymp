@@ -42,6 +42,19 @@ public static class ModInstaller
         File.WriteAllText(Path.Combine(gameDir, RecordFile),
             JsonSerializer.Serialize(records.Values.OrderBy(m => m.ModId).ThenBy(m => m.FileId).ToList(), new JsonSerializerOptions { WriteIndented = true }));
 
+    /// <summary>An archive's FOMOD installer (fomod\ModuleConfig.xml), or null when it has none.</summary>
+    public static string? ReadInstaller(string archivePath)
+    {
+        using var archive = ArchiveFactory.OpenArchive(archivePath);
+        var entries = archive.Entries.Where(e => !e.IsDirectory && e.Key != null).ToList();
+        var moduleRoot = Fomod.FindModuleRoot(entries.Select(e => e.Key!));
+        if (moduleRoot == null) return null;
+        var configKey = (moduleRoot.Length == 0 ? "" : moduleRoot + "\\") + "fomod\\ModuleConfig.xml";
+        var configEntry = entries.First(e => Fomod.Normalize(e.Key!).Equals(configKey, StringComparison.OrdinalIgnoreCase));
+        using var reader = new StreamReader(configEntry.OpenEntryStream(), detectEncodingFromByteOrderMarks: true);
+        return reader.ReadToEnd();
+    }
+
     /// <summary>Where each archive file would go in Data, without installing anything.</summary>
     public static List<Fomod.Placement> Plan(Collection.Mod mod, string archivePath, ModList.Rule? rule, string? dataDir = null)
     {
