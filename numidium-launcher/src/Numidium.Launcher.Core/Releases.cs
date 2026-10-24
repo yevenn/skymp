@@ -29,16 +29,21 @@ public static class Releases
         [property: JsonPropertyName("html_url")] string PageUrl,
         [property: JsonPropertyName("draft")] bool Draft,
         [property: JsonPropertyName("prerelease")] bool Prerelease,
-        [property: JsonPropertyName("assets")] List<Asset> Assets)
+        [property: JsonPropertyName("assets")] List<Asset> Assets,
+        [property: JsonPropertyName("published_at")] DateTimeOffset? PublishedAt = null)
     {
         public Asset? Find(string name) => Assets.FirstOrDefault(a => a.Name.Equals(name, StringComparison.OrdinalIgnoreCase));
     }
 
-    /// <summary>The newest published release with a client package in GitHub's
-    /// release list (newest first), or null. The fork's other releases, if any, lack one.</summary>
+    /// <summary>The most recently published release with a client package, or null.
+    /// Not the first in GitHub's list: that isn't sorted by date (releases of one day
+    /// came back in reverse order of their tags, which differ by commit hash). The
+    /// fork's other releases, if any, lack a client package.</summary>
     public static Release? PickLatest(string releasesJson) =>
         (JsonSerializer.Deserialize<List<Release>>(releasesJson) ?? new())
-        .FirstOrDefault(r => !r.Draft && !r.Prerelease && r.Find(ClientPackage.InfoFile) != null);
+        .Where(r => !r.Draft && !r.Prerelease && r.Find(ClientPackage.InfoFile) != null)
+        .OrderByDescending(r => r.PublishedAt ?? DateTimeOffset.MinValue)
+        .FirstOrDefault();
 
     public static async Task<Release?> FetchLatestAsync(HttpClient http, CancellationToken cancel = default)
     {

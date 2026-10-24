@@ -10,13 +10,15 @@ namespace Numidium.Launcher.Tests;
 public class ReleaseTests
 {
     // GitHub's release list, newest first, with only the fields the launcher reads
-    private static string ReleaseJson(string tag, bool draft = false, bool prerelease = false, params string[] assets) =>
+    private static string ReleaseJson(string tag, bool draft = false, bool prerelease = false, string published = "2026-10-24T12:00:00Z",
+        params string[] assets) =>
         JsonSerializer.Serialize(new
         {
             tag_name = tag,
             html_url = $"https://github.com/yevenn/skymp/releases/tag/{tag}",
             draft,
             prerelease,
+            published_at = published,
             assets = assets.Select(a => new { name = a, browser_download_url = $"https://files.test/{tag}/{a}", size = 1 }),
         });
 
@@ -24,14 +26,25 @@ public class ReleaseTests
     public void PicksTheNewestPublishedReleaseWithAClientPackage()
     {
         var list = "[" + string.Join(",",
-            ReleaseJson("numidium-3", draft: true, assets: ClientPackage.InfoFile),
-            ReleaseJson("numidium-2", prerelease: true, assets: ClientPackage.InfoFile),
-            ReleaseJson("v5.0.0", assets: "skymp-server.zip"), // an upstream-style release without one
+            ReleaseJson("numidium-3", draft: true, published: "2026-10-26T00:00:00Z", assets: ClientPackage.InfoFile),
+            ReleaseJson("numidium-2", prerelease: true, published: "2026-10-25T00:00:00Z", assets: ClientPackage.InfoFile),
+            ReleaseJson("v5.0.0", published: "2026-10-27T00:00:00Z", assets: "skymp-server.zip"), // an upstream-style release without one
             ReleaseJson("numidium-1", assets: new[] { ClientPackage.InfoFile, "numidium-client-1.zip" })) + "]";
         var release = Releases.PickLatest(list);
         Assert.Equal("numidium-1", release?.Tag);
         Assert.Equal("https://files.test/numidium-1/numidium-client-1.zip", release!.Find("NUMIDIUM-CLIENT-1.ZIP")?.Url);
         Assert.Null(Releases.PickLatest("[]"));
+    }
+
+    // As GitHub listed them on 2026-10-24: not newest first
+    [Fact]
+    public void PicksByPublishDateNotListOrder()
+    {
+        var list = "[" + string.Join(",",
+            ReleaseJson("numidium-2026.10.24-8df7d5e5", published: "2026-10-24T13:45:10Z", assets: ClientPackage.InfoFile),
+            ReleaseJson("numidium-2026.10.24-56a67b54", published: "2026-10-24T16:20:31Z", assets: ClientPackage.InfoFile),
+            ReleaseJson("numidium-2026.10.24-4edb21af", published: "2026-10-24T12:30:06Z", assets: ClientPackage.InfoFile)) + "]";
+        Assert.Equal("numidium-2026.10.24-56a67b54", Releases.PickLatest(list)?.Tag);
     }
 
     /// <summary>Serves <c>https://files.test/...</c> from a dictionary and counts requests.</summary>
