@@ -118,6 +118,24 @@ public class ReleaseTests
         Assert.False(File.Exists(Path.Combine(dir.Path, "numidium-client-1.zip")), "the old version's zip is gone");
     }
 
+    // The real newest release on GitHub, when NUMIDIUM_RELEASE_TEST=1: found, mirrored,
+    // and its zip downloaded and checked (about 150 MB)
+    [Fact]
+    public async Task MirrorsTheRealNewestRelease()
+    {
+        if (Environment.GetEnvironmentVariable("NUMIDIUM_RELEASE_TEST") != "1") return;
+        using var dir = new TempDir();
+        using var http = new HttpClient();
+        var release = await Releases.FetchLatestAsync(http);
+        Assert.NotNull(release);
+        await Releases.SyncAsync(http, release!, dir.Path);
+        await Releases.EnsurePackageAsync(http, dir.Path);
+        var info = ClientPackage.ReadInfo(Path.Combine(dir.Path, ClientPackage.InfoFile));
+        Assert.Equal(release!.Tag, "numidium-" + info.Version);
+        Assert.True(Collection.Load(Path.Combine(dir.Path, Collection.FileName)).Mods.Count > 0);
+        File.WriteAllText(Path.Combine(Path.GetTempPath(), "numidium-release-test.txt"), $"{release.Tag} {info.File} {info.Size}");
+    }
+
     [Fact]
     public async Task RefusesADownloadThatDoesntMatchItsChecksum()
     {

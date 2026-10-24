@@ -375,7 +375,8 @@ public partial class MainWindow : Window
             var copy = new GameCopy(settings.GameDir!);
             var source = settings.SteamGameDir!;
             Log($"Checking the base game in {copy.Dir} and copying what it lacks from {source}...");
-            var result = await Task.Run(() => copy.Update(source, CopyProgressReporter()));
+            var copyProgress = CopyProgressReporter();
+            var result = await Task.Run(() => copy.Update(source, copyProgress));
             Log($"Base game: {result.Copied} copied ({result.BytesWritten / (1024 * 1024)} MB), " +
                 $"{result.Linked} hard-linked, {result.Unchanged} already right.");
             var depots = result.Depots();
@@ -429,6 +430,8 @@ public partial class MainWindow : Window
         }
     }
 
+    // Create it on the window's thread, outside Task.Run: Progress reports back to the
+    // thread that made it, and only the window's thread may touch the progress bar
     private IProgress<GameCopy.Progress> CopyProgressReporter() => new Progress<GameCopy.Progress>(p =>
     {
         CopyProgress.Maximum = Math.Max(1, p.Total);
@@ -469,7 +472,8 @@ public partial class MainWindow : Window
         foreach (var (depot, files) in depots)
         {
             var dir = SteamDepots.ContentDir(steamRoot, depot.Id);
-            if (Directory.Exists(dir) && await Task.Run(() => copy.DepotHas(dir, files, CopyProgressReporter())))
+            var checkProgress = CopyProgressReporter();
+            if (Directory.Exists(dir) && await Task.Run(() => copy.DepotHas(dir, files, checkProgress)))
             {
                 Log($"Steam already downloaded {depot.Contents}.");
             }
@@ -486,7 +490,8 @@ public partial class MainWindow : Window
                 dir = await Task.Run(() => SteamDepots.DownloadAsync(steamRoot, depot, d => copy.DepotHas(d, files), status));
             }
             Log($"Moving {files.Count} files of {depot.Contents} into the Numidium copy...");
-            await Task.Run(() => copy.InstallFromDepot(dir, files, CopyProgressReporter()));
+            var moveProgress = CopyProgressReporter();
+            await Task.Run(() => copy.InstallFromDepot(dir, files, moveProgress));
             SteamDepots.Remove(dir);
         }
 
