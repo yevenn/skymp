@@ -1,6 +1,4 @@
 
-// TODO: send event instead of direct dependency on FormView class
-import { FormView } from "../../view/formView";
 import { QueryKeyCodeBindings } from "../events/queryKeyCodeBindings";
 
 import { ClientListener, CombinedController, Sp } from "./clientListener";
@@ -24,9 +22,7 @@ export class BrowserService extends ClientListener {
 
   // TODO: keycodes should be configurable
   private onQueryKeyCodeBindings(e: QueryKeyCodeBindings) {
-    if (e.isDown([DxScanCode.F1])) {
-      FormView.isDisplayingNicknames = !FormView.isDisplayingNicknames;
-    }
+    // F1 (SkyMP's nickname toggle) is the gamemode's now: it shows and hides its labels
     if (e.isDown([DxScanCode.F2])) {
       this.sp.browser.setVisible(!this.sp.browser.isVisible());
     }

@@ -692,5 +692,7 @@ export class FormView {
   private textNameId: number | undefined = undefined;
 
 
-  public static isDisplayingNicknames: boolean = true;
+  // Off: Numidium's gamemode draws its own labels in the game's HUD (IDs until
+  // people introduce themselves), and F1 toggles those
+  public static isDisplayingNicknames: boolean = false;
 }
