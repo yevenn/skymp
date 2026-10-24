@@ -3,6 +3,8 @@
 #   build\numidium-client\numidium-client-<version>.zip
 #   build\numidium-client\numidium-client.json   (version, file, size, sha256)
 #   build\numidium-client\numidium-modlist.json  (from numidium-dev)
+#   build\numidium-client\NOTICE.md              (licenses and credits; also in the zip,
+#                                                 under Numidium\Licenses with the license texts)
 #   build\numidium-client\collection.json        (numidium-dev\collection.json, or with -Collection the
 #                                                 Nexus collection's archive as Vortex exports or
 #                                                 downloads it, or another collection.json)
@@ -49,6 +51,25 @@ $extra = @{
   "Data\CalienteTools\BodySlide\SliderGroups\Numidium.xml" = (Join-Path $PSScriptRoot "bodyslide\Numidium.xml")
 }
 
+# Licenses and credits, in Numidium\Licenses: the GPL/AGPL texts, where the source
+# is, and the notices of everything bundled (one per vcpkg package built in)
+$licenses = "Numidium\Licenses"
+$commit = (& git -C $Repo rev-parse HEAD).Trim()
+$sourceState = if ($dirty) { "with uncommitted changes: a test build, not a release" } else { "the release's tag points at it" }
+$noticeTemp = Join-Path ([IO.Path]::GetTempPath()) "numidium-NOTICE-$([guid]::NewGuid()).md"
+$notice = (Get-Content (Join-Path $PSScriptRoot "NOTICE.md") -Raw).Replace("{commit}", $commit).Replace("{source}", $sourceState)
+[IO.File]::WriteAllText($noticeTemp, $notice, (New-Object Text.UTF8Encoding $false))
+$extra["$licenses\NOTICE.md"] = $noticeTemp
+$extra["$licenses\GPL-3.0.txt"] = Join-Path $Repo "skymp5-client\LICENSE"
+$extra["$licenses\AGPL-3.0.txt"] = Join-Path $Repo "skymp5-server\LICENSE"
+$extra["$licenses\THIRD_PARTY_LICENSES.txt"] = Join-Path $Repo "THIRD_PARTY_LICENSES"
+$vcpkgShare = Join-Path $Repo "build\vcpkg_installed\x64-windows-sp\share"
+$notices = @(Get-ChildItem $vcpkgShare -Directory | Where-Object { Test-Path (Join-Path $_.FullName "copyright") })
+if ($notices.Count -eq 0) { throw "No package notices in $vcpkgShare; build the client first" }
+foreach ($package in $notices) {
+  $extra["$licenses\third-party\$($package.Name).txt"] = Join-Path $package.FullName "copyright"
+}
+
 $zip = [System.IO.Compression.ZipFile]::Open($zipPath, [System.IO.Compression.ZipArchiveMode]::Create)
 try {
   foreach ($rel in $files) {
@@ -59,7 +80,10 @@ try {
     [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $extra[$rel], $rel.Replace('\', '/'),
       [System.IO.Compression.CompressionLevel]::Optimal) | Out-Null
   }
-} finally { $zip.Dispose() }
+} finally {
+  $zip.Dispose()
+  Remove-Item $noticeTemp -ErrorAction SilentlyContinue
+}
 
 $hash = (Get-FileHash $zipPath -Algorithm SHA256).Hash.ToLowerInvariant()
 if ($dirty) { $Version += "-dirty-" + $hash.Substring(0, 8) }
@@ -77,6 +101,7 @@ $info = [ordered]@{
 Write-Host ("{0}: {1} files, {2:n0} MB" -f $zipName, ($files.Count + $extra.Count), ($info.size / 1MB))
 
 Copy-Item (Join-Path $PSScriptRoot "numidium-modlist.json") $outDir -Force
+[IO.File]::WriteAllText((Join-Path $outDir "NOTICE.md"), $notice, (New-Object Text.UTF8Encoding $false))
 if (-not $Collection) { $Collection = Join-Path $PSScriptRoot "collection.json" }
 if (Test-Path $Collection) {
   $target = Join-Path $outDir "collection.json"

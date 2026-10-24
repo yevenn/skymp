@@ -2,7 +2,7 @@
 # (package-client.ps1), builds the launcher stamped with the same version, and
 # gathers what the launcher downloads into build\numidium-release\<version>:
 #   Numidium.Launcher.exe, numidium-client.json, numidium-client-<version>.zip,
-#   collection.json, numidium-modlist.json
+#   collection.json, numidium-modlist.json, NOTICE.md (licenses and credits)
 # With -Publish it creates the GitHub release numidium-<version> on yevenn/skymp
 # with those files, through the GitHub CLI (gh, signed in with `gh auth login`).
 # Without it, upload them yourself at https://github.com/yevenn/skymp/releases/new
@@ -41,7 +41,7 @@ $publishDir = Join-Path $Repo "build\numidium-release\launcher-publish"
 if ($LASTEXITCODE -ne 0) { throw "Building the launcher failed" }
 Copy-Item (Join-Path $publishDir "Numidium.Launcher.exe") $out
 
-foreach ($name in @("numidium-client.json", $info.file, "collection.json", "numidium-modlist.json")) {
+foreach ($name in @("numidium-client.json", $info.file, "collection.json", "numidium-modlist.json", "NOTICE.md")) {
   $from = Join-Path $packageDir $name
   if (-not (Test-Path $from)) { throw "$name is missing from $packageDir" }
   Copy-Item $from $out
@@ -56,7 +56,9 @@ if (-not $Publish) {
   return
 }
 if (-not (Get-Command gh -ErrorAction SilentlyContinue)) { throw "The GitHub CLI (gh) isn't installed; upload the files by hand instead." }
-if (-not $Notes) { $Notes = "Numidium client $version, from commit $sha." }
+if (-not $Notes) {
+  $Notes = "Numidium client $version, from commit $sha.`n`nSource: https://github.com/yevenn/skymp/tree/$sha (GPL-3.0 client, AGPL-3.0 server). Licenses and credits: NOTICE.md."
+}
 & gh release create $tag @($files.FullName) --repo yevenn/skymp --target $sha --title "Numidium $version" --notes $Notes
 if ($LASTEXITCODE -ne 0) { throw "gh release create failed" }
 Write-Host "Published https://github.com/yevenn/skymp/releases/tag/$tag"
