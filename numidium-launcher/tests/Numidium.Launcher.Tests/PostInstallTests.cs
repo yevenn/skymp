@@ -75,6 +75,27 @@ public class BodiesTests
     }
 
     [Fact]
+    public void PointsBodySlideAtTheCopyInsteadOfSteam()
+    {
+        using var game = new TempDir();
+        Assert.False(Bodies.PointAtCopy(game.Path), "no BodySlide yet");
+        var config = game.File(@"Data\CalienteTools\BodySlide\Config.xml", """
+            <Config>
+                <!-- 4 = SKYRIMSE -->
+                <TargetGame>4</TargetGame>
+                <GameDataPath>E:\SteamLibrary\steamapps\common\Skyrim Special Edition\Data\</GameDataPath>
+                <OutputDataPath></OutputDataPath>
+            </Config>
+            """);
+        Assert.True(Bodies.PointAtCopy(game.Path));
+        var text = File.ReadAllText(config);
+        Assert.Contains($"<GameDataPath>{Path.Combine(game.Path, "Data")}\\</GameDataPath>", text);
+        Assert.Contains("<!-- 4 = SKYRIMSE -->", text); // the rest is kept
+        Assert.Contains("<TargetGame>4</TargetGame>", text);
+        Assert.False(Bodies.PointAtCopy(game.Path), "already pointing at the copy");
+    }
+
+    [Fact]
     public void RebuildsWhenGroupsOrModsChange()
     {
         using var game = new TempDir();

@@ -24,6 +24,31 @@ public static class Bodies
 
     public static string BodySlideDir(string gameDir) => Path.Combine(gameDir, "Data", "CalienteTools", "BodySlide");
 
+    /// <summary>
+    /// Points the copy's BodySlide at the copy's Data folder (Config.xml's GameDataPath).
+    /// On its first run BodySlide takes the path from the registry, which is the Steam
+    /// install's: building by hand would then write meshes into Steam's folder. Returns
+    /// whether it changed anything.
+    /// </summary>
+    public static bool PointAtCopy(string gameDir)
+    {
+        var config = Path.Combine(BodySlideDir(gameDir), "Config.xml");
+        if (!File.Exists(config)) return false;
+        var doc = System.Xml.Linq.XDocument.Load(config, System.Xml.Linq.LoadOptions.PreserveWhitespace);
+        var root = doc.Root ?? throw new InvalidDataException($"{config} is empty");
+        var data = Path.GetFullPath(Path.Combine(gameDir, "Data")).TrimEnd('\\') + "\\";
+        var element = root.Element("GameDataPath");
+        if (element != null && string.Equals(element.Value, data, StringComparison.OrdinalIgnoreCase)) return false;
+        if (element == null) root.Add(element = new System.Xml.Linq.XElement("GameDataPath"));
+        element.Value = data;
+        FileInstall.Replace(config, s =>
+        {
+            using var writer = System.Xml.XmlWriter.Create(s, new System.Xml.XmlWriterSettings { Encoding = new UTF8Encoding(true), OmitXmlDeclaration = doc.Declaration == null });
+            doc.Save(writer);
+        });
+        return true;
+    }
+
     public static bool CanBuild(string gameDir) =>
         File.Exists(Path.Combine(BodySlideDir(gameDir), "BodySlide.exe")) &&
         File.Exists(Path.Combine(BodySlideDir(gameDir), "SliderGroups", GroupsFile));
@@ -55,6 +80,7 @@ public static class Bodies
     public static async Task BuildAsync(string gameDir, Action<string>? log = null, CancellationToken cancel = default)
     {
         if (!CanBuild(gameDir)) throw new InvalidOperationException("BodySlide or the Numidium body groups aren't installed yet.");
+        PointAtCopy(gameDir);
         var bodySlide = BodySlideDir(gameDir);
         var data = Path.Combine(gameDir, "Data");
         foreach (var (group, preset) in Builds)

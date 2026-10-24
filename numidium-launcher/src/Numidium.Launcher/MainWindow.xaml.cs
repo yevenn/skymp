@@ -223,6 +223,15 @@ public partial class MainWindow : Window
             Log($"Couldn't limit RaceMenu's Height slider: {ex.Message}");
         }
 
+        try
+        {
+            if (Bodies.PointAtCopy(gameDir)) Log("BodySlide now builds into the Numidium game folder, not Steam's.");
+        }
+        catch (Exception ex) when (ex is IOException or System.Xml.XmlException or InvalidDataException)
+        {
+            Log($"Couldn't point BodySlide at the Numidium game folder: {ex.Message}");
+        }
+
         if (!Bodies.CanBuild(gameDir) || Bodies.IsUpToDate(gameDir)) return;
         try
         {
