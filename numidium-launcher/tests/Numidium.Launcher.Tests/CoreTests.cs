@@ -205,6 +205,24 @@ public class LauncherSettingsTests
     }
 
     [Fact]
+    public void PlaysOnNumidiumsServerUnlessAnotherIsPicked()
+    {
+        using var dir = new TempDir();
+        var path = Path.Combine(dir.Path, "launcher.json");
+        Assert.Equal((LauncherSettings.NumidiumHost, 7777), new LauncherSettings().Server);
+
+        // Saved by an older launcher, pointed at a home server: switches over, keeps the address
+        File.WriteAllText(path, """{ "GameDir": "E:\\Numidium\\Game", "ServerHost": "192.168.1.39", "ServerPort": 7777 }""");
+        var old = LauncherSettings.Load(path);
+        Assert.Equal((LauncherSettings.NumidiumHost, 7777), old.Server);
+        Assert.Equal("192.168.1.39", old.ServerHost);
+
+        old.UseNumidiumServer = false;
+        old.Save(path);
+        Assert.Equal(("192.168.1.39", 7777), LauncherSettings.Load(path).Server);
+    }
+
+    [Fact]
     public void FindsAPackageBundledBesideTheLauncher()
     {
         using var launcher = new TempDir();

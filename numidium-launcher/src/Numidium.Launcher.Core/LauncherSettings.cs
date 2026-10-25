@@ -5,12 +5,24 @@ namespace Numidium.Launcher.Core;
 /// <summary>The launcher's own settings, in %LOCALAPPDATA%\Numidium\launcher.json.</summary>
 public sealed class LauncherSettings
 {
+    /// <summary>Numidium's own server (the Scaleway VPS), which players use unless
+    /// they pick another one. Moving the server means a launcher release.</summary>
+    public const string NumidiumHost = "07611da2-89df-4204-af40-5008440d60c9.pub.instances.scw.cloud";
+    public const int NumidiumPort = 7777;
+
     public string? SteamGameDir { get; set; }
     public string? GameDir { get; set; }
+    /// <summary>Play on Numidium's server. Off: the custom server below (home or test
+    /// servers). Settings saved before this existed lack it, so they switch to
+    /// Numidium's server and keep their old address as the custom one.</summary>
+    public bool UseNumidiumServer { get; set; } = true;
     public string ServerHost { get; set; } = "127.0.0.1";
     public int ServerPort { get; set; } = 7777;
     /// <summary>Only offline (dev) servers use it; real servers authenticate.</summary>
     public int? ProfileId { get; set; }
+
+    /// <summary>The server Play connects to.</summary>
+    public (string Host, int Port) Server => UseNumidiumServer ? (NumidiumHost, NumidiumPort) : (ServerHost, ServerPort);
     /// <summary>A folder holding numidium-client.json and its zip (package-client.ps1's
     /// output), for testing a package before it's released. Null: GitHub releases.</summary>
     public string? ClientPackageDir { get; set; }

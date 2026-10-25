@@ -90,14 +90,23 @@
 
             <Border DockPanel.Dock="Top" Style="{StaticResource Card}">
                 <StackPanel>
-                    <Grid>
+                    <DockPanel>
+                        <Button x:Name="ServerChoiceButton" DockPanel.Dock="Right" VerticalAlignment="Bottom" Margin="8,0,0,0"
+                                Click="ServerChoice_Click"/>
+                        <StackPanel>
+                            <TextBlock Style="{StaticResource Heading}" Text="SERVER"/>
+                            <TextBlock x:Name="ServerName" FontSize="16" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <!-- Another server than Numidium's: a home or test server -->
+                    <Grid x:Name="CustomServerFields" Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="90"/>
                             <ColumnDefinition Width="110"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Grid.Column="0" Margin="0,0,8,0">
-                            <TextBlock Style="{StaticResource Heading}" Text="SERVER"/>
+                            <TextBlock Style="{StaticResource Heading}" Text="ADDRESS"/>
                             <TextBox x:Name="HostBox"/>
                         </StackPanel>
                         <StackPanel Grid.Column="1" Margin="0,0,8,0">

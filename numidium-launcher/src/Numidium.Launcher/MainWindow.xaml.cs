@@ -26,6 +26,7 @@ public partial class MainWindow : Window
         HostBox.Text = settings.ServerHost;
         PortBox.Text = settings.ServerPort.ToString();
         ProfileBox.Text = settings.ProfileId?.ToString() ?? "";
+        ShowServerChoice();
         DownloadsDirBox.Text = DownloadsDir;
         Title = $"Numidium · launcher {LauncherVersion}";
         RefreshStatus();
@@ -655,10 +656,36 @@ public partial class MainWindow : Window
         }
     }
 
+    /// <summary>Numidium's server, or the fields for another one.</summary>
+    private void ShowServerChoice()
+    {
+        var numidium = settings.UseNumidiumServer;
+        ServerName.Text = numidium ? "Numidium" : "Another server";
+        ServerName.Foreground = numidium ? Foreground : Muted;
+        CustomServerFields.Visibility = numidium ? Visibility.Collapsed : Visibility.Visible;
+        ServerChoiceButton.Content = numidium ? "Other server..." : "Numidium's server";
+        ServerChoiceButton.ToolTip = numidium
+            ? "Play on a home or test server instead"
+            : "Back to Numidium's own server";
+    }
+
+    private void ServerChoice_Click(object sender, RoutedEventArgs e)
+    {
+        settings.UseNumidiumServer = !settings.UseNumidiumServer;
+        settings.Save();
+        ShowServerChoice();
+        ShowAccount("Play asks the server whether it needs a Discord sign-in.", Muted);
+    }
+
     private bool ReadServerFields(out string host, out int port, out int? profileId)
     {
-        host = HostBox.Text.Trim();
         profileId = null;
+        if (settings.UseNumidiumServer)
+        {
+            (host, port) = settings.Server;
+            return true;
+        }
+        host = HostBox.Text.Trim();
         if (host.Length == 0 || !int.TryParse(PortBox.Text.Trim(), out port) || port is <= 0 or > 65535)
         {
             Log("Enter a server address and a port between 1 and 65535.");
