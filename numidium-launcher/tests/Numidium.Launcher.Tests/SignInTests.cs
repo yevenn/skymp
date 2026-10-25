@@ -115,6 +115,18 @@ public class SignInTests
         Assert.False(ServerManifest.Parse("{\"mods\":[]}").UsesDiscordSignIn);
     }
 
+    // Hosted servers sit behind HTTPS; home and test servers answer on plain http:3000
+    [Theory]
+    [InlineData("07611da2-89df-4204-af40-5008440d60c9.pub.instances.scw.cloud", "https://07611da2-89df-4204-af40-5008440d60c9.pub.instances.scw.cloud")]
+    [InlineData("play.numidium.example", "https://play.numidium.example")]
+    [InlineData("192.168.1.39", "http://192.168.1.39:3000")]
+    [InlineData("127.0.0.1", "http://127.0.0.1:3000")]
+    [InlineData("localhost", "http://localhost:3000")]
+    [InlineData("DESKTOP-PC", "http://DESKTOP-PC:3000")]
+    [InlineData("[::1]", "http://[::1]:3000")]
+    public void PicksHttpsForPublicNamesOnly(string host, string baseUrl) =>
+        Assert.Equal(baseUrl, ServerManifest.BaseUrl(host));
+
     [Fact]
     public void TheSessionReplacesTheDevProfileInTheClientSettings()
     {

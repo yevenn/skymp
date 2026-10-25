@@ -47,8 +47,18 @@ public sealed class ServerManifest
         return new(document?.Mods ?? throw new FormatException("manifest.json has no mods"), document.Auth);
     }
 
-    /// <summary>The server's resources address, where manifest.json and sign-in live.</summary>
-    public static string BaseUrl(string host, int resourcesPort = ResourcesPort) => $"http://{host}:{resourcesPort}";
+    /// <summary>
+    /// The server's resources address, where manifest.json and sign-in live. A public
+    /// name (with a dot, not an IP address) is a hosted server behind HTTPS on 443;
+    /// an IP address or a bare machine name is a home or test server on plain http
+    /// and the resources port. Never falls back from one to the other, so the
+    /// Discord sign-in can't be pushed onto plain http.
+    /// </summary>
+    public static string BaseUrl(string host, int resourcesPort = ResourcesPort) =>
+        UsesHttps(host) ? $"https://{host}" : $"http://{host}:{resourcesPort}";
+
+    public static bool UsesHttps(string host) =>
+        host.Contains('.') && !System.Net.IPAddress.TryParse(host.Trim('[', ']'), out _);
 
     public static async Task<ServerManifest> FetchAsync(string host, int resourcesPort = ResourcesPort, CancellationToken cancel = default)
     {
