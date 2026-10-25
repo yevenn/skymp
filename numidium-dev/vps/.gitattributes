@@ -1,0 +1,2 @@
+# Run by bash and installed on Linux: keep LF even with core.autocrlf
+* text eol=lf

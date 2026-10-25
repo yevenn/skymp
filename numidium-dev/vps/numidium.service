@@ -1,0 +1,33 @@
+# Numidium server on the VPS. Installed by deploy-vps.sh as
+# /etc/systemd/system/numidium.service. Logs: journalctl -u numidium
+[Unit]
+Description=Numidium server
+After=network-online.target
+Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+User=numidium
+Group=numidium
+WorkingDirectory=/opt/numidium/server
+ExecStart=/usr/bin/node dist_back/skymp5-server.js
+Restart=always
+RestartSec=5
+# The server saves the world as it goes; give it time to finish on stop
+TimeoutStopSec=30
+LimitNOFILE=65536
+
+# It only needs to write in its own folder
+NoNewPrivileges=yes
+ProtectSystem=strict
+ReadWritePaths=/opt/numidium/server
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+
+[Install]
+WantedBy=multi-user.target
