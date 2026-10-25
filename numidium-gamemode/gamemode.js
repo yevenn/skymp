@@ -43,6 +43,8 @@ const HELP_LINES = [
   '  /ooc text — global out-of-character',
   '  /roll [XdY] — roll dice nearby, e.g. /roll 2d6',
   '  /names — hide or show the names above heads (or F1)',
+  '  /id — your own ID',
+  '  /faction (or /f) — your factions; /f help for the rest',
   'Enter opens the chat, Esc closes it.',
   'Look at someone and press X to introduce yourself. Until then, people know you by your ID.',
 ];
@@ -286,6 +288,14 @@ const handleChat = (actorId, rawText) => {
   }
   if (name === 'names') {
     toggleNames(actorId);
+    return;
+  }
+  if (name === 'faction' || name === 'f') {
+    factionCommand(actorId, args);
+    return;
+  }
+  if (name === 'id') {
+    system(actorId, `Your ID is ${getCharId(actorId) || 'not set yet'}: what people who don't know you see over your head.`);
     return;
   }
   if (name === 'help' || name === 'h') {
@@ -1037,6 +1047,715 @@ const toggleBodyDouble = (actorId) => {
     : 'Body double shown, but you have no synced body yet: open and close RaceMenu first.');
 };
 
+// ---------------------------------------------------------------------------
+// Factions: the Jarldoms, their Guards, and whatever admins create later
+// ---------------------------------------------------------------------------
+//
+// Kept in numidium-factions.json in the server folder rather than on actors, so
+// leaders can manage members who are offline. Members are characters, by ID.
+//
+//   factions: { [factionId]: { name, seat?, parent, group, ranks } }
+//     ranks: [{ id, name, perms, actsAs? }], from the top rank down
+//     group: a character is in at most one faction of a group ('hold', 'guard');
+//       null for no limit
+//     actsAs: { group, rank }: in the sub-faction of that group, members of this
+//       rank count as that rank for permissions (a hold's housecarls are
+//       guardsmen of its Guard), without being listed as its members
+//   members: { [charId]: { [factionId]: rankId } }
+//   invites: { [charId]: { [factionId]: { rank, by, at } } }, accepted with
+//     /faction accept; they expire after INVITE_DAYS
+//
+// Permissions (a rank's perms):
+//   manage   everything in the faction and its sub-factions: members, ranks,
+//            names (the Jarl). The parent's leader manages the sub-faction too
+//   recruit  invite people, to ranks below one's own
+//   dismiss  remove members ranked below one's own
+//   promote  change the rank of members below one's own, to ranks below it
+//   property grant house and storage rights (not built yet)
+//   cuff     cuff people (not built yet)
+// Only people ranked below you can be acted on, and only ranks below yours given.
+// Admins (numidiumAuth.admins) rank above everyone, in every faction.
+
+const fs = require('fs');
+const path = require('path');
+
+const FACTIONS_FILE = path.resolve('numidium-factions.json');
+const INVITE_DAYS = 3;
+const FACTION_ID_PATTERN = /^[a-z][a-z0-9-]{1,31}$/;
+const RANK_ID_PATTERN = /^[a-z][a-z0-9-]{0,23}$/;
+const MAX_FACTION_NAME_LENGTH = 48;
+const PERMISSIONS = ['manage', 'recruit', 'dismiss', 'promote', 'property', 'cuff'];
+
+const FACTION_TEMPLATES = {
+  hold: {
+    group: 'hold',
+    ranks: [
+      { id: 'jarl', name: 'Jarl', perms: ['manage'] },
+      { id: 'steward', name: 'Steward', perms: ['property'] },
+      { id: 'housecarl', name: 'Housecarl', perms: [], actsAs: { group: 'guard', rank: 'guardsman' } },
+      { id: 'court', name: 'Court', perms: [] },
+    ],
+  },
+  guard: {
+    group: 'guard',
+    ranks: [
+      { id: 'commander', name: 'Commander', perms: ['recruit', 'dismiss', 'promote', 'cuff'] },
+      { id: 'captain', name: 'Captain', perms: ['recruit', 'dismiss', 'promote', 'cuff'] },
+      { id: 'lieutenant', name: 'Lieutenant', perms: ['recruit', 'dismiss', 'promote', 'cuff'] },
+      { id: 'sergeant', name: 'Sergeant', perms: ['cuff'] },
+      { id: 'guardsman', name: 'Guardsman', perms: ['cuff'] },
+      { id: 'recruit', name: 'Recruit', perms: [] },
+    ],
+  },
+  // A plain faction for anything else: a leader, members, no limits
+  basic: {
+    group: null,
+    ranks: [
+      { id: 'leader', name: 'Leader', perms: ['manage'] },
+      { id: 'member', name: 'Member', perms: [] },
+    ],
+  },
+};
+
+// The nine Jarldoms (id, name, seat), each with its Guard (<id>-guard)
+const HOLDS = [
+  ['haafingar', 'Haafingar', 'Solitude'],
+  ['hjaalmarch', 'Hjaalmarch', 'Morthal'],
+  ['reach', 'The Reach', 'Markarth'],
+  ['falkreath', 'Falkreath', 'Falkreath'],
+  ['whiterun', 'Whiterun', 'Whiterun'],
+  ['pale', 'The Pale', 'Dawnstar'],
+  ['rift', 'The Rift', 'Riften'],
+  ['winterhold', 'Winterhold', 'Winterhold'],
+  ['eastmarch', 'Eastmarch', 'Windhelm'],
+];
+
+const copyRanks = (ranks) => ranks.map((rank) => ({ ...rank, perms: [...rank.perms], ...(rank.actsAs ? { actsAs: { ...rank.actsAs } } : {}) }));
+
+const newFaction = (template, name, parent, seat) => ({
+  name,
+  ...(seat ? { seat } : {}),
+  parent: parent || null,
+  group: FACTION_TEMPLATES[template].group,
+  ranks: copyRanks(FACTION_TEMPLATES[template].ranks),
+});
+
+const defaultFactions = () => {
+  const factions = {};
+  for (const [id, name, seat] of HOLDS) {
+    factions[id] = newFaction('hold', name, null, seat);
+    factions[`${id}-guard`] = newFaction('guard', `${seat} Guard`, id);
+  }
+  return { factions, members: {}, invites: {} };
+};
+
+const loadFactions = () => {
+  if (!fs.existsSync(FACTIONS_FILE)) {
+    const data = defaultFactions();
+    saveFactionsTo(data);
+    console.log(`[faction] created ${FACTIONS_FILE} with the ${HOLDS.length} Jarldoms and their Guards`);
+    return data;
+  }
+  const data = JSON.parse(fs.readFileSync(FACTIONS_FILE, 'utf8'));
+  return { factions: data.factions || {}, members: data.members || {}, invites: data.invites || {} };
+};
+
+function saveFactionsTo(data) {
+  const temp = FACTIONS_FILE + '.tmp';
+  fs.writeFileSync(temp, JSON.stringify(data, null, 2));
+  fs.renameSync(temp, FACTIONS_FILE);
+}
+
+// Loaded once per gamemode (re)load; every change is written straight back
+let factionData;
+try {
+  factionData = loadFactions();
+} catch (e) {
+  // A broken file mustn't be overwritten with an empty one: factions stay off
+  console.error(`[faction] couldn't read ${FACTIONS_FILE}; factions are off until it's fixed`, e);
+  factionData = null;
+}
+
+const saveFactions = () => saveFactionsTo(factionData);
+
+const factionLog = (text) => console.log(`[faction] ${text}`);
+
+const findFaction = (text) => {
+  if (!text) return null;
+  const key = text.toLowerCase();
+  if (factionData.factions[key]) return key;
+  return Object.keys(factionData.factions).find((id) => factionData.factions[id].name.toLowerCase() === key) || null;
+};
+
+const rankIndex = (factionId, rankText) => {
+  if (!rankText) return -1;
+  const key = rankText.toLowerCase();
+  return factionData.factions[factionId].ranks.findIndex((r) => r.id === key || r.name.toLowerCase() === key);
+};
+
+const rankName = (factionId, rankId) => {
+  const rank = factionData.factions[factionId].ranks.find((r) => r.id === rankId);
+  return rank ? rank.name : rankId;
+};
+
+const subFactions = (factionId) => Object.keys(factionData.factions).filter((id) => factionData.factions[id].parent === factionId);
+
+// The faction above factionId and the one above that, and so on
+const ancestors = (factionId) => {
+  const chain = [];
+  let parent = factionData.factions[factionId].parent;
+  while (parent && factionData.factions[parent] && !chain.includes(parent)) {
+    chain.push(parent);
+    parent = factionData.factions[parent].parent;
+  }
+  return chain;
+};
+
+const membershipsOf = (charId) => factionData.members[charId] || {};
+
+const ADMIN_LEVEL = -2;
+const PARENT_LEADER_LEVEL = -1;
+const NO_LEVEL = Infinity;
+
+// How high charId stands in factionId: a rank index (0 is the top rank), or
+// PARENT_LEADER_LEVEL for someone who manages a faction above it; with the
+// permissions that come with it
+const standing = (charId, factionId) => {
+  const faction = factionData.factions[factionId];
+  let level = NO_LEVEL;
+  let perms = new Set();
+  const take = (index) => {
+    if (index < 0 || index >= level) return;
+    level = index;
+    perms = new Set(faction.ranks[index].perms);
+  };
+  const own = membershipsOf(charId)[factionId];
+  if (own !== undefined) take(faction.ranks.findIndex((r) => r.id === own));
+  for (const ancestorId of ancestors(factionId)) {
+    const ancestorRankId = membershipsOf(charId)[ancestorId];
+    if (ancestorRankId === undefined) continue;
+    const ancestorRank = factionData.factions[ancestorId].ranks.find((r) => r.id === ancestorRankId);
+    if (!ancestorRank) continue;
+    if (ancestorRank.perms.includes('manage')) {
+      return { level: PARENT_LEADER_LEVEL, perms: new Set(PERMISSIONS) };
+    }
+    // A hold's housecarls are guardsmen of its own Guard
+    if (ancestorRank.actsAs && ancestorRank.actsAs.group === faction.group && ancestorId === faction.parent) {
+      take(faction.ranks.findIndex((r) => r.id === ancestorRank.actsAs.rank));
+    }
+  }
+  if (perms.has('manage')) perms = new Set(PERMISSIONS);
+  return { level, perms };
+};
+
+const actorStanding = (actorId, factionId) => {
+  if (isAdmin(actorId)) return { level: ADMIN_LEVEL, perms: new Set(PERMISSIONS) };
+  const charId = getCharId(actorId);
+  return charId ? standing(charId, factionId) : { level: NO_LEVEL, perms: new Set() };
+};
+
+// Whether actorId has perm in factionId: for other systems (cuffs, property)
+const factionCan = (actorId, factionId, perm) => factionData !== null && !!factionData.factions[factionId]
+  && actorStanding(actorId, factionId).perms.has(perm);
+
+// The actor form of a character ID, or null
+const actorOfCharId = (charId) => {
+  const forms = mp.findFormsByPropertyValue('private.indexed.rpCharId', charId);
+  return forms.length ? forms[0] : null;
+};
+
+// How viewerId sees a character known by ID: name and ID if they know them
+const describeChar = (viewerId, charId) => {
+  const actorId = actorOfCharId(charId);
+  if (actorId === null) return charId;
+  return knows(viewerId, actorId) ? `${getName(actorId)} [${charId}]` : charId;
+};
+
+const tellChar = (charId, text) => {
+  const actorId = actorOfCharId(charId);
+  if (actorId !== null && isOnline(actorId)) system(actorId, text);
+};
+
+const setMembership = (charId, factionId, rankId) => {
+  const memberships = { ...membershipsOf(charId) };
+  if (rankId === null) delete memberships[factionId];
+  else memberships[factionId] = rankId;
+  if (Object.keys(memberships).length) factionData.members[charId] = memberships;
+  else delete factionData.members[charId];
+};
+
+const dropInvite = (charId, factionId) => {
+  const invites = { ...(factionData.invites[charId] || {}) };
+  delete invites[factionId];
+  if (Object.keys(invites).length) factionData.invites[charId] = invites;
+  else delete factionData.invites[charId];
+};
+
+const pendingInvites = (charId) => {
+  const now = Date.now();
+  const invites = factionData.invites[charId] || {};
+  return Object.keys(invites).filter((factionId) => factionData.factions[factionId]
+    && now - invites[factionId].at < INVITE_DAYS * 24 * 3600 * 1000);
+};
+
+// The faction of the same group that charId is already in, if any
+const sameGroupFaction = (charId, factionId) => {
+  const group = factionData.factions[factionId].group;
+  if (!group) return null;
+  return Object.keys(membershipsOf(charId)).find((id) => id !== factionId
+    && factionData.factions[id] && factionData.factions[id].group === group) || null;
+};
+
+// "/f <command> <faction> <ID> ..." helpers: each replies to the actor and
+// returns null when something's wrong
+const needFaction = (actorId, text) => {
+  const factionId = findFaction(text);
+  if (!factionId) system(actorId, text ? `There's no faction "${text}". /faction all lists them.` : 'Which faction? /faction all lists them.');
+  return factionId;
+};
+
+const needCharId = (actorId, text) => {
+  const charId = (text || '').toUpperCase();
+  if (!charId || actorOfCharId(charId) === null) {
+    system(actorId, text ? `Nobody has the ID ${charId}.` : 'Whose ID? It\'s the code over their head.');
+    return null;
+  }
+  return charId;
+};
+
+const needRank = (actorId, factionId, text, actorLevel) => {
+  const index = text ? rankIndex(factionId, text) : factionData.factions[factionId].ranks.length - 1;
+  const names = factionData.factions[factionId].ranks.map((r) => r.name).join(', ');
+  if (index < 0) {
+    system(actorId, `${factionData.factions[factionId].name} has no rank "${text}". Its ranks: ${names}.`);
+    return null;
+  }
+  if (index <= actorLevel) {
+    system(actorId, `You can only give ranks below your own.`);
+    return null;
+  }
+  return index;
+};
+
+// Only those ranked below the actor can be acted on
+const needBelow = (actorId, factionId, charId, actorLevel) => {
+  const rankId = membershipsOf(charId)[factionId];
+  if (rankId === undefined) {
+    system(actorId, `${describeChar(actorId, charId)} isn't in ${factionData.factions[factionId].name}.`);
+    return false;
+  }
+  if (factionData.factions[factionId].ranks.findIndex((r) => r.id === rankId) <= actorLevel) {
+    system(actorId, `${describeChar(actorId, charId)} isn't ranked below you.`);
+    return false;
+  }
+  return true;
+};
+
+const needPerm = (actorId, factionId, perm, what) => {
+  const { level, perms } = actorStanding(actorId, factionId);
+  if (!perms.has(perm)) {
+    system(actorId, `You can't ${what} in ${factionData.factions[factionId].name}.`);
+    return null;
+  }
+  return level;
+};
+
+const listOwnFactions = (actorId) => {
+  const charId = getCharId(actorId);
+  const memberships = membershipsOf(charId);
+  const ids = Object.keys(memberships).filter((id) => factionData.factions[id]);
+  system(actorId, ids.length
+    ? `Your factions: ${ids.map((id) => `${factionData.factions[id].name} (${rankName(id, memberships[id])})`).join(', ')}.`
+    : 'You are in no faction.');
+  for (const factionId of pendingInvites(charId)) {
+    const invite = factionData.invites[charId][factionId];
+    system(actorId, `Invitation: ${factionData.factions[factionId].name}, as ${rankName(factionId, invite.rank)}. `
+      + `/faction accept ${factionId} or /faction decline ${factionId}.`);
+  }
+};
+
+const listAllFactions = (actorId) => {
+  const ids = Object.keys(factionData.factions);
+  const line = (id, depth) => {
+    const faction = factionData.factions[id];
+    system(actorId, `${'  '.repeat(depth)}${faction.name}${faction.seat ? ` (${faction.seat})` : ''}: ${id}`);
+    for (const sub of subFactions(id)) line(sub, depth + 1);
+  };
+  system(actorId, 'Factions (name: id):');
+  for (const id of ids.filter((id) => !factionData.factions[id].parent || !factionData.factions[factionData.factions[id].parent])) line(id, 0);
+};
+
+const showFaction = (actorId, factionId) => {
+  const faction = factionData.factions[factionId];
+  const parent = faction.parent && factionData.factions[faction.parent];
+  system(actorId, `${faction.name}${faction.seat ? `, seat ${faction.seat}` : ''} (${factionId})`
+    + `${parent ? `, part of ${parent.name}` : ''}${faction.group ? `, one per character among the ${faction.group} factions` : ''}.`);
+  const counts = {};
+  for (const charId of Object.keys(factionData.members)) {
+    const rankId = factionData.members[charId][factionId];
+    if (rankId !== undefined) (counts[rankId] = counts[rankId] || []).push(charId);
+  }
+  // Members see who's in it; others only how many
+  const { level } = actorStanding(actorId, factionId);
+  const seesMembers = level !== NO_LEVEL;
+  for (const rank of faction.ranks) {
+    const members = counts[rank.id] || [];
+    const perms = rank.perms.length ? ` [${rank.perms.join(', ')}]` : '';
+    const acts = rank.actsAs ? ` [counts as ${rank.actsAs.rank} in the ${rank.actsAs.group}]` : '';
+    const who = seesMembers && members.length ? `: ${members.map((c) => describeChar(actorId, c)).join(', ')}` : '';
+    system(actorId, `  ${rank.name} (${rank.id})${perms}${acts}: ${members.length}${who}`);
+  }
+};
+
+const invite = (actorId, args) => {
+  const [factionText, charText, rankText] = args;
+  const factionId = needFaction(actorId, factionText);
+  if (!factionId) return;
+  const level = needPerm(actorId, factionId, 'recruit', 'invite people');
+  if (level === null) return;
+  const charId = needCharId(actorId, charText);
+  if (!charId) return;
+  const faction = factionData.factions[factionId];
+  if (membershipsOf(charId)[factionId] !== undefined) {
+    system(actorId, `${describeChar(actorId, charId)} is already in ${faction.name}. /faction rank changes their rank.`);
+    return;
+  }
+  const index = needRank(actorId, factionId, rankText, level);
+  if (index === null) return;
+  const rankId = faction.ranks[index].id;
+  factionData.invites[charId] = { ...(factionData.invites[charId] || {}), [factionId]: { rank: rankId, by: getCharId(actorId), at: Date.now() } };
+  saveFactions();
+  factionLog(`${getName(actorId)} [${getCharId(actorId)}] invited ${charId} to ${factionId} as ${rankId}`);
+  system(actorId, `You invited ${describeChar(actorId, charId)} to ${faction.name} as ${faction.ranks[index].name}. `
+    + `They have ${INVITE_DAYS} days to accept.`);
+  tellChar(charId, `You're invited to join ${faction.name} as ${faction.ranks[index].name}. `
+    + `/faction accept ${factionId} or /faction decline ${factionId}.`);
+};
+
+const respondToInvite = (actorId, args, accept) => {
+  const charId = getCharId(actorId);
+  const pending = pendingInvites(charId);
+  const factionId = args[0] ? findFaction(args[0]) : pending.length === 1 ? pending[0] : null;
+  if (!factionId || !pending.includes(factionId)) {
+    system(actorId, pending.length
+      ? `Which invitation? You have: ${pending.join(', ')}.`
+      : 'You have no invitation.');
+    return;
+  }
+  const faction = factionData.factions[factionId];
+  const { rank, by } = factionData.invites[charId][factionId];
+  if (!accept) {
+    dropInvite(charId, factionId);
+    saveFactions();
+    factionLog(`${charId} declined ${factionId}`);
+    system(actorId, `You declined to join ${faction.name}.`);
+    return;
+  }
+  const other = sameGroupFaction(charId, factionId);
+  if (other) {
+    system(actorId, `You're already in ${factionData.factions[other].name}: one ${faction.group} at a time. `
+      + `/faction leave ${other} first.`);
+    return;
+  }
+  if (rankIndex(factionId, rank) < 0) {
+    dropInvite(charId, factionId);
+    saveFactions();
+    system(actorId, `That invitation's rank no longer exists in ${faction.name}; ask for a new one.`);
+    return;
+  }
+  dropInvite(charId, factionId);
+  setMembership(charId, factionId, rank);
+  saveFactions();
+  factionLog(`${getName(actorId)} [${charId}] joined ${factionId} as ${rank}`);
+  system(actorId, `You joined ${faction.name} as ${rankName(factionId, rank)}.`);
+  if (by) {
+    const byActor = actorOfCharId(by);
+    if (byActor !== null && isOnline(byActor)) system(byActor, `${describeChar(byActor, charId)} joined ${faction.name}.`);
+  }
+};
+
+const dismiss = (actorId, args) => {
+  const [factionText, charText] = args;
+  const factionId = needFaction(actorId, factionText);
+  if (!factionId) return;
+  const level = needPerm(actorId, factionId, 'dismiss', 'remove members');
+  if (level === null) return;
+  const charId = needCharId(actorId, charText);
+  if (!charId || !needBelow(actorId, factionId, charId, level)) return;
+  setMembership(charId, factionId, null);
+  saveFactions();
+  const faction = factionData.factions[factionId];
+  factionLog(`${getName(actorId)} [${getCharId(actorId)}] removed ${charId} from ${factionId}`);
+  system(actorId, `You removed ${describeChar(actorId, charId)} from ${faction.name}.`);
+  tellChar(charId, `You were removed from ${faction.name}.`);
+};
+
+const changeRank = (actorId, args) => {
+  const [factionText, charText, rankText] = args;
+  const factionId = needFaction(actorId, factionText);
+  if (!factionId) return;
+  const level = needPerm(actorId, factionId, 'promote', 'change ranks');
+  if (level === null) return;
+  const charId = needCharId(actorId, charText);
+  if (!charId || !needBelow(actorId, factionId, charId, level)) return;
+  if (!rankText) {
+    system(actorId, 'Which rank? /faction rank <faction> <ID> <rank>');
+    return;
+  }
+  const index = needRank(actorId, factionId, rankText, level);
+  if (index === null) return;
+  const faction = factionData.factions[factionId];
+  setMembership(charId, factionId, faction.ranks[index].id);
+  saveFactions();
+  factionLog(`${getName(actorId)} [${getCharId(actorId)}] set ${charId} to ${faction.ranks[index].id} in ${factionId}`);
+  system(actorId, `${describeChar(actorId, charId)} is now ${faction.ranks[index].name} in ${faction.name}.`);
+  tellChar(charId, `You are now ${faction.ranks[index].name} in ${faction.name}.`);
+};
+
+const leave = (actorId, args) => {
+  const charId = getCharId(actorId);
+  const factionId = needFaction(actorId, args[0]);
+  if (!factionId) return;
+  const faction = factionData.factions[factionId];
+  if (membershipsOf(charId)[factionId] === undefined) {
+    system(actorId, `You aren't in ${faction.name}.`);
+    return;
+  }
+  setMembership(charId, factionId, null);
+  saveFactions();
+  factionLog(`${getName(actorId)} [${charId}] left ${factionId}`);
+  system(actorId, `You left ${faction.name}.`);
+};
+
+// Admin commands: shaping factions and appointing people directly
+
+const adminSet = (actorId, args) => {
+  const [factionText, charText, rankText] = args;
+  const factionId = needFaction(actorId, factionText);
+  if (!factionId) return;
+  const charId = needCharId(actorId, charText);
+  if (!charId) return;
+  const faction = factionData.factions[factionId];
+  if (rankText && rankText.toLowerCase() === 'none') {
+    setMembership(charId, factionId, null);
+    saveFactions();
+    factionLog(`admin ${getName(actorId)} removed ${charId} from ${factionId}`);
+    system(actorId, `${describeChar(actorId, charId)} is no longer in ${faction.name}.`);
+    return;
+  }
+  const index = needRank(actorId, factionId, rankText || faction.ranks[0].id, ADMIN_LEVEL);
+  if (index === null) return;
+  const other = sameGroupFaction(charId, factionId);
+  if (other) setMembership(charId, other, null);
+  setMembership(charId, factionId, faction.ranks[index].id);
+  dropInvite(charId, factionId);
+  saveFactions();
+  factionLog(`admin ${getName(actorId)} set ${charId} to ${faction.ranks[index].id} in ${factionId}${other ? ` (out of ${other})` : ''}`);
+  system(actorId, `${describeChar(actorId, charId)} is now ${faction.ranks[index].name} in ${faction.name}`
+    + `${other ? ` (and no longer in ${factionData.factions[other].name})` : ''}.`);
+  tellChar(charId, `You are now ${faction.ranks[index].name} in ${faction.name}.`);
+};
+
+const adminCreate = (actorId, args, rest) => {
+  const [idText, template] = args;
+  const id = (idText || '').toLowerCase();
+  const name = rest(2);
+  if (!FACTION_ID_PATTERN.test(id) || !FACTION_TEMPLATES[template] || !name) {
+    system(actorId, `Usage: /faction create <id> <${Object.keys(FACTION_TEMPLATES).join('|')}> <Name>, `
+      + 'for example /faction create companions basic The Companions. Ids: lowercase letters, digits, dashes.');
+    return;
+  }
+  if (factionData.factions[id]) {
+    system(actorId, `There's already a faction ${id}.`);
+    return;
+  }
+  factionData.factions[id] = newFaction(template, name.slice(0, MAX_FACTION_NAME_LENGTH), null);
+  saveFactions();
+  factionLog(`admin ${getName(actorId)} created ${id} (${template}): ${name}`);
+  system(actorId, `Created ${name} (${id}) from the ${template} template. /faction parent ${id} <faction> puts it under another.`);
+};
+
+const adminDelete = (actorId, args) => {
+  const factionId = needFaction(actorId, args[0]);
+  if (!factionId) return;
+  if (args[1] !== 'confirm') {
+    const members = Object.keys(factionData.members).filter((c) => factionData.members[c][factionId] !== undefined).length;
+    system(actorId, `This deletes ${factionData.factions[factionId].name} and its ${members} membership(s). `
+      + `/faction delete ${factionId} confirm to go ahead.`);
+    return;
+  }
+  const name = factionData.factions[factionId].name;
+  delete factionData.factions[factionId];
+  for (const charId of Object.keys(factionData.members)) setMembership(charId, factionId, null);
+  for (const charId of Object.keys(factionData.invites)) dropInvite(charId, factionId);
+  for (const sub of subFactions(factionId)) factionData.factions[sub].parent = null;
+  saveFactions();
+  factionLog(`admin ${getName(actorId)} deleted ${factionId}`);
+  system(actorId, `Deleted ${name}.`);
+};
+
+const adminRename = (actorId, args, rest) => {
+  const factionId = needFaction(actorId, args[0]);
+  if (!factionId) return;
+  const name = rest(1);
+  if (!name) {
+    system(actorId, 'Usage: /faction rename <faction> <New name>');
+    return;
+  }
+  factionData.factions[factionId].name = name.slice(0, MAX_FACTION_NAME_LENGTH);
+  saveFactions();
+  factionLog(`admin ${getName(actorId)} renamed ${factionId} to ${name}`);
+  system(actorId, `${factionId} is now called ${factionData.factions[factionId].name}.`);
+};
+
+const adminParent = (actorId, args) => {
+  const factionId = needFaction(actorId, args[0]);
+  if (!factionId) return;
+  if ((args[1] || '').toLowerCase() === 'none') {
+    factionData.factions[factionId].parent = null;
+  } else {
+    const parentId = needFaction(actorId, args[1]);
+    if (!parentId) return;
+    if (parentId === factionId || ancestors(parentId).includes(factionId)) {
+      system(actorId, `${factionData.factions[parentId].name} is inside ${factionData.factions[factionId].name} already.`);
+      return;
+    }
+    factionData.factions[factionId].parent = parentId;
+  }
+  saveFactions();
+  const parent = factionData.factions[factionId].parent;
+  factionLog(`admin ${getName(actorId)} set ${factionId}'s parent to ${parent}`);
+  system(actorId, parent
+    ? `${factionData.factions[factionId].name} is now part of ${factionData.factions[parent].name}.`
+    : `${factionData.factions[factionId].name} is now on its own.`);
+};
+
+// /faction ranks <faction> add <id> <Name> | remove <rank> | rename <rank> <Name>
+//   | perms <rank> +perm -perm ... | move <rank> up|down
+const adminRanks = (actorId, args, rest) => {
+  const factionId = needFaction(actorId, args[0]);
+  if (!factionId) return;
+  const faction = factionData.factions[factionId];
+  const action = (args[1] || '').toLowerCase();
+  const usage = () => system(actorId, `Usage: /faction ranks ${factionId} add <id> <Name> | remove <rank> | rename <rank> <Name> `
+    + `| perms <rank> +perm -perm (${PERMISSIONS.join(', ')}) | move <rank> up|down. New ranks go at the bottom.`);
+  if (action === 'add') {
+    const id = (args[2] || '').toLowerCase();
+    const name = rest(3);
+    if (!RANK_ID_PATTERN.test(id) || !name) return usage();
+    if (faction.ranks.some((r) => r.id === id)) {
+      system(actorId, `${faction.name} already has a rank ${id}.`);
+      return;
+    }
+    faction.ranks.push({ id, name: name.slice(0, MAX_FACTION_NAME_LENGTH), perms: [] });
+  } else {
+    const index = rankIndex(factionId, args[2]);
+    if (!['remove', 'rename', 'perms', 'move'].includes(action)) return usage();
+    if (index < 0) {
+      system(actorId, `${faction.name} has no rank "${args[2] || ''}". Its ranks: ${faction.ranks.map((r) => r.id).join(', ')}.`);
+      return;
+    }
+    const rank = faction.ranks[index];
+    if (action === 'remove') {
+      const holders = Object.keys(factionData.members).filter((c) => factionData.members[c][factionId] === rank.id);
+      if (holders.length) {
+        system(actorId, `${holders.length} member(s) hold ${rank.name}: give them another rank first.`);
+        return;
+      }
+      if (faction.ranks.length === 1) {
+        system(actorId, 'A faction needs at least one rank.');
+        return;
+      }
+      faction.ranks.splice(index, 1);
+    } else if (action === 'rename') {
+      const name = rest(3);
+      if (!name) return usage();
+      rank.name = name.slice(0, MAX_FACTION_NAME_LENGTH);
+    } else if (action === 'perms') {
+      for (const change of args.slice(3)) {
+        const perm = change.slice(1).toLowerCase();
+        if (!/^[+-]/.test(change) || !PERMISSIONS.includes(perm)) return usage();
+        rank.perms = change[0] === '+' ? [...new Set([...rank.perms, perm])] : rank.perms.filter((p) => p !== perm);
+      }
+    } else {
+      const to = (args[3] || '').toLowerCase() === 'up' ? index - 1 : (args[3] || '').toLowerCase() === 'down' ? index + 1 : -1;
+      if (to < 0 || to >= faction.ranks.length) return usage();
+      faction.ranks.splice(index, 1);
+      faction.ranks.splice(to, 0, rank);
+    }
+  }
+  saveFactions();
+  factionLog(`admin ${getName(actorId)} changed ${factionId}'s ranks: ${args.slice(1).join(' ')}`);
+  showFaction(actorId, factionId);
+};
+
+const FACTION_HELP = [
+  'Factions (/faction or /f):',
+  '  /f — your factions and invitations',
+  '  /f all — every faction;  /f info <faction> — its ranks and members',
+  '  /f invite <faction> <ID> [rank] — invite someone (by the ID over their head)',
+  '  /f accept [faction]  /f decline [faction] — answer an invitation',
+  '  /f remove <faction> <ID>  /f rank <faction> <ID> <rank> — for those ranked below you',
+  '  /f leave <faction>',
+];
+
+const FACTION_ADMIN_HELP = [
+  'Admin: /f set <faction> <ID> [rank|none] — appoint or remove directly (e.g. a Jarl)',
+  '  /f create <id> <hold|guard|basic> <Name>  /f parent <faction> <faction|none>',
+  '  /f rename <faction> <Name>  /f delete <faction>',
+  '  /f ranks <faction> add|remove|rename|perms|move ...',
+];
+
+const factionCommand = (actorId, argsText) => {
+  if (!factionData) {
+    system(actorId, 'Factions are unavailable: the server couldn\'t read its faction file.');
+    return;
+  }
+  if (!getCharId(actorId)) return;
+  const words = argsText ? argsText.split(' ') : [];
+  const sub = (words[0] || '').toLowerCase();
+  const args = words.slice(1);
+  // The words from the n-th argument on, as typed (names with spaces)
+  const rest = (n) => args.slice(n).join(' ').trim();
+  const admin = isAdmin(actorId);
+  const adminOnly = (fn) => {
+    if (!admin) {
+      system(actorId, 'Only admins can do that.');
+      return;
+    }
+    fn(actorId, args, rest);
+  };
+  switch (sub) {
+    case '':
+    case 'list': return listOwnFactions(actorId);
+    case 'all': return listAllFactions(actorId);
+    case 'info': {
+      const factionId = needFaction(actorId, args[0]);
+      return factionId && showFaction(actorId, factionId);
+    }
+    case 'invite':
+    case 'add': return invite(actorId, args);
+    case 'accept': return respondToInvite(actorId, args, true);
+    case 'decline': return respondToInvite(actorId, args, false);
+    case 'remove':
+    case 'kick': return dismiss(actorId, args);
+    case 'rank':
+    case 'promote':
+    case 'demote': return changeRank(actorId, args);
+    case 'leave': return leave(actorId, args);
+    case 'set': return adminOnly(adminSet);
+    case 'create': return adminOnly(adminCreate);
+    case 'delete': return adminOnly(adminDelete);
+    case 'rename': return adminOnly(adminRename);
+    case 'parent': return adminOnly(adminParent);
+    case 'ranks': return adminOnly(adminRanks);
+    case 'help':
+    default:
+      for (const line of FACTION_HELP) system(actorId, line);
+      if (admin) for (const line of FACTION_ADMIN_HELP) system(actorId, line);
+  }
+};
+
 mp.makeProperty('rpChat', {
   isVisibleByOwner: true,
   isVisibleByNeighbors: false,
@@ -1117,5 +1836,6 @@ mp._rpBodySave = (actorId, data) => {
 
 hideLeftoverBodyDoubles();
 
-console.log('[numidium] gamemode loaded: roleplay chat, RaceMenu body sync');
+console.log(`[numidium] gamemode loaded: roleplay chat, RaceMenu body sync, `
+  + `${factionData ? Object.keys(factionData.factions).length : 'no'} factions`);
 
