@@ -1,0 +1,117 @@
+# Builds Numidium's server for Linux (Ubuntu 24.04, like the VPS) from this fork
+# and publishes it on the rolling pre-release "numidium-server-linux", replacing
+# the previous build. The asset is public, so the server can fetch it without a
+# GitHub sign-in. The launcher ignores this release: it is a pre-release without
+# a client package.
+#
+# Only the server is built (the native addon and the bundled TypeScript); the
+# gamemode, plugins and settings are deployed separately.
+name: Numidium Linux server
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write  # to update the release
+
+concurrency:
+  group: numidium-linux-server
+  cancel-in-progress: false
+
+env:
+  BUILD_TYPE: RelWithDebInfo
+  BASE_SYSTEM: ubuntu-2404
+  RELEASE_TAG: numidium-server-linux
+  ASSET: numidium-server-linux.tar.gz
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: vcpkg version
+        id: vcpkg
+        run: echo "commit=$(git -C vcpkg rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Compiled vcpkg packages, so later builds skip rebuilding the C++ dependencies
+      - name: Restore vcpkg cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.vcpkg-cache
+          key: vcpkg-${{ env.BASE_SYSTEM }}-${{ steps.vcpkg.outputs.commit }}-${{ hashFiles('vcpkg.json', 'overlay_ports/**', 'overlay_triplets/**') }}
+          restore-keys: vcpkg-${{ env.BASE_SYSTEM }}-
+
+      - name: Build image with the dependencies
+        run: |
+          mkdir -p .vcpkg-cache
+          docker run --name prepare_deps_container \
+            -v "$GITHUB_WORKSPACE:/src" -w /src \
+            -e CI=true -e "CREATE_UID=$(id -u)" \
+            "$(misc/deps_linux/$BASE_SYSTEM.sh --get-image-uri)" \
+            "misc/deps_linux/$BASE_SYSTEM.sh" --ensure-deps-noninteractive
+          docker commit prepare_deps_container localhost/buildimage
+          docker rm prepare_deps_container
+
+      - name: Prepare
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -w /src -u root localhost/buildimage \
+            chown -R skymp:skymp /src
+
+      - name: Configure
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -w /src -u skymp \
+            -e CI=true -e VCPKG_DEFAULT_BINARY_CACHE=/src/.vcpkg-cache \
+            localhost/buildimage \
+            ./build.sh --configure \
+              -DCMAKE_BUILD_TYPE=$BUILD_TYPE \
+              -DBUILD_CLIENT=OFF \
+              -DBUILD_SKYRIM_PLATFORM=OFF \
+              -DBUILD_SCRIPTS=OFF \
+              -DBUILD_UNIT_TESTS=OFF
+
+      - name: Build the server
+        run: |
+          docker run --rm -v "$GITHUB_WORKSPACE:/src" -w /src -u skymp \
+            -e CI=true -e VCPKG_DEFAULT_BINARY_CACHE=/src/.vcpkg-cache \
+            localhost/buildimage \
+            ./build.sh --build --target=skymp5-server
+
+      - name: Upload vcpkg logs
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: vcpkg-logs
+          path: |
+            ${{ github.workspace }}/build/vcpkg-*.log
+            ${{ github.workspace }}/vcpkg/buildtrees/**/*.log
+
+      # Only what the VPS needs: the addon, the bundled server and its package.json.
+      # The generated server-settings.json is left out so it can't replace the real one.
+      - name: Package
+        run: |
+          cd build/dist/server
+          ls -la . dist_back
+          tar czf "$GITHUB_WORKSPACE/$ASSET" scam_native.node dist_back package.json
+          cd "$GITHUB_WORKSPACE"
+          sha256sum "$ASSET" | tee "$ASSET.sha256"
+
+      - name: Publish on the rolling release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          short=$(git rev-parse --short HEAD)
+          notes="Linux server build of $short ($(git log -1 --format=%cs)), Ubuntu 24.04. Built by the Numidium Linux server workflow; not a game release."
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            # Move the tag to this build's commit
+            gh api -X PATCH "repos/$GITHUB_REPOSITORY/git/refs/tags/$RELEASE_TAG" -f sha="$(git rev-parse HEAD)" -F force=true >/dev/null
+            gh release edit "$RELEASE_TAG" --prerelease --title "Numidium Linux server ($short)" --notes "$notes"
+          else
+            gh release create "$RELEASE_TAG" --prerelease --title "Numidium Linux server ($short)" --notes "$notes" --target "$(git rev-parse HEAD)"
+          fi
+          gh release upload "$RELEASE_TAG" "$ASSET" "$ASSET.sha256" --clobber
