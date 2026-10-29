@@ -1871,6 +1871,57 @@ const teleportCommand = (actorId, argsText) => {
   }
 };
 
+// ---------------------------------------------------------------------------
+// Crafting: every recipe visible from the start (until RP professions exist)
+// ---------------------------------------------------------------------------
+//
+// Recipes don't check skill levels; they hide behind perks (Steel Smithing and the
+// other material perks, Arcane Blacksmith for enchanted items, the Moon Monk
+// robes' own perk). The server doesn't check perks when someone crafts (it
+// passes condition functions it doesn't know), so only the crafting menu hides
+// them. Perks live in each player's own game and every login starts without
+// them, so the server keeps the list on the character (rpPerks, seen only by its
+// owner) and the player's game adds any it lacks. Side effect, as in vanilla: the
+// material perks also double how far those items can be improved.
+
+const CRAFTING_PERKS = [
+  [0x0cb40d, 'Skyrim.esm'], // SteelSmithing
+  [0x0cb40f, 'Skyrim.esm'], // ElvenSmithing
+  [0x0cb40e, 'Skyrim.esm'], // DwarvenSmithing
+  [0x0cb414, 'Skyrim.esm'], // AdvancedArmors
+  [0x0cb410, 'Skyrim.esm'], // OrcishSmithing
+  [0x0cb411, 'Skyrim.esm'], // GlassSmithing
+  [0x0cb412, 'Skyrim.esm'], // EbonySmithing
+  [0x0cb413, 'Skyrim.esm'], // DaedricSmithing
+  [0x052190, 'Skyrim.esm'], // DragonArmor
+  [0x05218e, 'Skyrim.esm'], // ArcaneBlacksmith
+  [0x00088c, 'Kad_MoonMonkRobes.esp'], // TeachMoonMonkPerk
+];
+
+const PERKS_UPDATE_OWNER = `
+  const CHECK_MS = 5000;
+  const state = ctx.state;
+  const now = Date.now();
+  if (now < (state.rpPerksCheckAt || 0)) return;
+  state.rpPerksCheckAt = now + CHECK_MS;
+  const perks = ctx.value && Array.isArray(ctx.value.perks) ? ctx.value.perks : [];
+  const player = ctx.sp.Game.getPlayer();
+  if (!player) return;
+  for (const [id, file] of perks) {
+    const perk = ctx.sp.Perk.from(ctx.sp.Game.getFormFromFile(id, file));
+    if (perk && !player.hasPerk(perk)) player.addPerk(perk);
+  }
+`;
+
+const grantCraftingPerks = (actorId) => mp.set(actorId, 'rpPerks', { perks: CRAFTING_PERKS });
+
+mp.makeProperty('rpPerks', {
+  isVisibleByOwner: true,
+  isVisibleByNeighbors: false,
+  updateOwner: PERKS_UPDATE_OWNER,
+  updateNeighbor: '',
+});
+
 mp.makeProperty('rpChat', {
   isVisibleByOwner: true,
   isVisibleByNeighbors: false,
@@ -1893,6 +1944,7 @@ mp._rpChatJoin = (actorId) => {
   try {
     ensureIdentity(actorId);
     refreshKnown(actorId);
+    grantCraftingPerks(actorId);
     if (isAdmin(actorId)) {
       mp.set(actorId, 'consoleCommandsAllowed', true);
       console.log(`[numidium] ${getName(actorId)} (${actorId.toString(16)}) is an admin: dev commands and console on`);
