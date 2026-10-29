@@ -294,12 +294,17 @@ const handleChat = (actorId, rawText) => {
     factionCommand(actorId, args);
     return;
   }
+  if (name === 'tp') {
+    teleportCommand(actorId, args);
+    return;
+  }
   if (name === 'id') {
     system(actorId, `Your ID is ${getCharId(actorId) || 'not set yet'}: what people who don't know you see over your head.`);
     return;
   }
   if (name === 'help' || name === 'h') {
     for (const line of HELP_LINES) system(actorId, line);
+    if (isAdmin(actorId)) system(actorId, 'Admin: /tp [place] [ID] — teleport yourself or someone; /tp alone lists the places.');
     return;
   }
   if (name === 'roll' || name === 'r') {
@@ -1753,6 +1758,116 @@ const factionCommand = (actorId, argsText) => {
     default:
       for (const line of FACTION_HELP) system(actorId, line);
       if (admin) for (const line of FACTION_ADMIN_HELP) system(actorId, line);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Teleports (admins): /tp to the holds' capitals, towns and landmarks
+// ---------------------------------------------------------------------------
+//
+// Each place is its fast-travel map marker, as the load order leaves it (the city
+// overhauls move some). The walled cities' markers are inside their own
+// worldspaces, so /tp whiterun lands within the walls; "-stables"/"-gate" are outside.
+
+const PLACES = [
+  // Holds
+  { id: 'solitude', name: "Solitude (Haafingar)", group: 'Holds', world: '37edf:Skyrim.esm', pos: [-64943, 104648, -8426], angleZ: 84 },
+  { id: 'morthal', name: "Morthal (Hjaalmarch)", group: 'Holds', world: '3c:Skyrim.esm', pos: [-38640, 66734, -13244], angleZ: 85 },
+  { id: 'markarth', name: "Markarth (The Reach)", group: 'Holds', world: '16d71:Skyrim.esm', pos: [-174024, 5255, -3322], angleZ: 269 },
+  { id: 'falkreath', name: "Falkreath", group: 'Holds', world: '3c:Skyrim.esm', pos: [-30296, -86284, -3107], angleZ: 238 },
+  { id: 'whiterun', name: "Whiterun", group: 'Holds', world: '1a26f:Skyrim.esm', pos: [19855, -7423, -3583], angleZ: 0 },
+  { id: 'dawnstar', name: "Dawnstar (The Pale)", group: 'Holds', world: '3c:Skyrim.esm', pos: [30808, 106138, -13921], angleZ: 0 },
+  { id: 'riften', name: "Riften (The Rift)", group: 'Holds', world: '16bb4:Skyrim.esm', pos: [173415, -96600, 11104], angleZ: 0 },
+  { id: 'winterhold', name: "Winterhold", group: 'Holds', world: '3c:Skyrim.esm', pos: [109208, 102864, -9013], angleZ: 350 },
+  { id: 'windhelm', name: "Windhelm (Eastmarch)", group: 'Holds', world: '1691d:Skyrim.esm', pos: [135026, 35597, -12469], angleZ: 0 },
+  // Outside the walls
+  { id: 'solitude-gate', name: "Solitude, east gate", group: 'Outside the walls', world: '3c:Skyrim.esm', pos: [-56887, 105135, -13686], angleZ: 52 },
+  { id: 'markarth-stables', name: "Markarth stables", group: 'Outside the walls', world: '3c:Skyrim.esm', pos: [-171097, 6922, -3937], angleZ: 0 },
+  { id: 'whiterun-stables', name: "Whiterun stables", group: 'Outside the walls', world: '3c:Skyrim.esm', pos: [18313, -10665, -4590], angleZ: 0 },
+  { id: 'riften-stables', name: "Riften stables", group: 'Outside the walls', world: '3c:Skyrim.esm', pos: [173137, -90912, 11102], angleZ: 79 },
+  { id: 'windhelm-stables', name: "Windhelm stables", group: 'Outside the walls', world: '3c:Skyrim.esm', pos: [135886, 26101, -12348], angleZ: 0 },
+  // Towns
+  { id: 'riverwood', name: "Riverwood", group: 'Towns', world: '3c:Skyrim.esm', pos: [21941, -44792, -140], angleZ: 0 },
+  { id: 'rorikstead', name: "Rorikstead", group: 'Towns', world: '3c:Skyrim.esm', pos: [-84302, 6952, -4298], angleZ: 320 },
+  { id: 'ivarstead', name: "Ivarstead", group: 'Towns', world: '3c:Skyrim.esm', pos: [76375, -64263, 10819], angleZ: 59 },
+  { id: 'dragon-bridge', name: "Dragon Bridge", group: 'Towns', world: '3c:Skyrim.esm', pos: [-102148, 82900, -12210], angleZ: 225 },
+  { id: 'karthwasten', name: "Karthwasten", group: 'Towns', world: '3c:Skyrim.esm', pos: [-132748, 38549, -6194], angleZ: 254 },
+  { id: 'shors-stone', name: "Shor's Stone", group: 'Towns', world: '3c:Skyrim.esm', pos: [162924, -60530, 7162], angleZ: 245 },
+  { id: 'kynesgrove', name: "Kynesgrove", group: 'Towns', world: '3c:Skyrim.esm', pos: [134947, 11395, -12200], angleZ: 93 },
+  { id: 'helgen', name: "Helgen", group: 'Towns', world: '3c:Skyrim.esm', pos: [18350, -79481, 9204], angleZ: 85 },
+  { id: 'old-hroldan', name: "Old Hroldan", group: 'Towns', world: '3c:Skyrim.esm', pos: [-114542, -6796, -5304], angleZ: 85 },
+  { id: 'darkwater', name: "Darkwater Crossing", group: 'Towns', world: '3c:Skyrim.esm', pos: [120428, -33954, -9782], angleZ: 26 },
+  { id: 'stonehills', name: "Stonehills", group: 'Towns', world: '3c:Skyrim.esm', pos: [-7283, 64267, -11462], angleZ: 95 },
+  { id: 'granite-hill', name: "Granite Hill", group: 'Towns', world: '3c:Skyrim.esm', pos: [-54411, -32391, -2686], angleZ: 314 },
+  { id: 'oakwood', name: "Oakwood", group: 'Towns', world: '3c:Skyrim.esm', pos: [-15910, -65554, 790], angleZ: 161 },
+  { id: 'northkeep', name: "Northkeep", group: 'Towns', world: '3c:Skyrim.esm', pos: [-58535, -75801, 34], angleZ: 331 },
+  { id: 'oars-rest', name: "Oar's Rest", group: 'Towns', world: '3c:Skyrim.esm', pos: [-44871, -47144, 719], angleZ: 0 },
+  { id: 'markarth-side', name: "Markarth Side", group: 'Towns', world: '3c:Skyrim.esm', pos: [-85904, 57896, -11569], angleZ: 0 },
+  // Landmarks
+  { id: 'high-hrothgar', name: "High Hrothgar", group: 'Landmarks', world: '3c:Skyrim.esm', pos: [52071, -36267, 22569], angleZ: 176 },
+  { id: 'college', name: "College of Winterhold", group: 'Landmarks', world: '3c:Skyrim.esm', pos: [116259, 111530, -7720], angleZ: 45 },
+];
+
+// Lands a little above the marker, so nobody ends up under the ground
+const TELEPORT_LIFT = 64;
+
+const placeKey = (text) => text.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+// An exact id or name first, then the only place starting with the text
+const findPlace = (text) => {
+  const key = placeKey(text);
+  if (!key) return { place: null, matches: [] };
+  const exact = PLACES.find((p) => placeKey(p.id) === key || placeKey(p.name) === key);
+  if (exact) return { place: exact, matches: [exact] };
+  const matches = PLACES.filter((p) => placeKey(p.id).startsWith(key) || placeKey(p.name).startsWith(key));
+  return { place: matches.length === 1 ? matches[0] : null, matches };
+};
+
+const teleportTo = (actorId, place) => {
+  const [x, y, z] = place.pos;
+  mp.set(actorId, 'locationalData', { cellOrWorldDesc: place.world, pos: [x, y, z + TELEPORT_LIFT], rot: [0, 0, place.angleZ] });
+};
+
+const listPlaces = (actorId) => {
+  system(actorId, 'Places (/tp <place> [ID]):');
+  for (const group of [...new Set(PLACES.map((p) => p.group))]) {
+    system(actorId, `  ${group}: ${PLACES.filter((p) => p.group === group).map((p) => p.id).join(', ')}`);
+  }
+};
+
+const teleportCommand = (actorId, argsText) => {
+  if (!isAdmin(actorId)) {
+    system(actorId, 'Only admins can teleport.');
+    return;
+  }
+  const [placeText, charText] = argsText ? argsText.split(' ') : [];
+  if (!placeText || placeText.toLowerCase() === 'list') {
+    listPlaces(actorId);
+    return;
+  }
+  const { place, matches } = findPlace(placeText);
+  if (!place) {
+    system(actorId, matches.length
+      ? `"${placeText}" could be ${matches.map((p) => p.id).join(', ')}.`
+      : `No place "${placeText}". /tp lists them.`);
+    return;
+  }
+  let targetId = actorId;
+  if (charText) {
+    const charId = charText.toUpperCase();
+    targetId = actorOfCharId(charId);
+    if (targetId === null || !isOnline(targetId)) {
+      system(actorId, `Nobody online has the ID ${charId}.`);
+      return;
+    }
+  }
+  teleportTo(targetId, place);
+  console.log(`[tp] ${getName(actorId)} [${getCharId(actorId)}] sent ${getName(targetId)} [${getCharId(targetId)}] to ${place.id}`);
+  if (targetId === actorId) {
+    system(actorId, `You travel to ${place.name}.`);
+  } else {
+    system(actorId, `You sent ${label(actorId, targetId)} to ${place.name}.`);
+    system(targetId, `An admin moved you to ${place.name}.`);
   }
 };
 
