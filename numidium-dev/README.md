@@ -91,13 +91,15 @@ Installed in the test copy by `install-mods.ps1`, downloaded from Nexus by hand:
 | XP32 Maximum Skeleton Special Extended | 5.06 | Minimal (skeleton only, no FNIS/Nemesis) |
 | RaceMenu Anniversary Edition | 0.4.20.0 | everything except `ModderResource` (needs SKSE 2.2.6, game 1.6.1170) |
 | BodySlide and Outfit Studio | 6.0.0 | everything except `FOMod` |
-| CBBE SFW Edition | 1.1.4 | Vanilla Outfits, Face Pack, Thin + Trimmed Brows, Dirt to Beauty Marks, CBBE Underwear (normal, black) |
+| CBBE SFW Edition | 1.1.4 | Vanilla Outfits, Face Pack, Thin + Trimmed Brows, Dirt to Beauty Marks, NeverNude underwear |
 | HIMBO V5 Core (Nevernude Body) + BG-DG-DB Refits | 5.8 / 5.8a | everything |
 
 BodySlide groups (`bodyslide/Numidium.xml`) and why:
 
 - Female: CBBE (SFW) bodies and vanilla, Dawnguard, Dragonborn and Creation Club outfits, using
-  the **CBBE Underwear** body, not NeverNude (both write `femalebody`).
+  the **CBBE NeverNude** body, not CBBE Underwear (both write `femalebody`): its underwear uses
+  the game's own `femaleunderwear.dds`, while CBBE Underwear's needs the textures CBBE SFW's
+  "Underwear" installer option adds (without them it shows purple).
 - Male: HIMBO Vanilla **Nevernude** body (not the SOS or High Poly variants) and the base game
   refits; "No Skirt Bones" variants since there's no physics mod; HIMBO's Creation Club refits
   are a separate download and not included.

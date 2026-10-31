@@ -1,7 +1,7 @@
 @echo off
 rem Builds the Numidium bodies and outfits into the SkyrimDev test copy with BodySlide.
 rem Groups "Numidium Female" / "Numidium Male" are in BodySlide\SliderGroups\Numidium.xml
-rem and list exactly the variants we use (CBBE Underwear body, HIMBO Vanilla Nevernude body).
+rem and list exactly the variants we use (CBBE NeverNude body, HIMBO Vanilla Nevernude body).
 rem --trimorphs builds the morph files RaceMenu's body sliders need.
 
 set DATA=E:\Jarldom\SkyrimDev\Data
