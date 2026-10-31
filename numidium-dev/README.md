@@ -113,7 +113,7 @@ Modded clothing ships vanilla-shaped bodies; these BodySlide projects rebuild it
 
 | Download | Covers | Notes |
 |---|---|---|
-| [Sentinel - 3BA Conversion](https://www.nexusmods.com/skyrimspecialedition/mods/159370) | Sentinel, City Guards, Priests and Acolytes (female) | 3BA shares CBBE's sliders. Adds `Sentinel - 3BA.esp` (light, female meshes for 12 armor addons), appended to the load order. Some of its sets write to another set's mesh; the losers (gilded ebony, berserk light, Dawnstar heavy 1st person, officer 2) keep Sentinel's own female meshes |
+| [Sentinel - 3BA Conversion](https://www.nexusmods.com/skyrimspecialedition/mods/159370) | Sentinel, City Guards, Priests and Acolytes (female) | Not built: its refits stretch with a weapon drawn (pauldrons and skirts weighted like skin), so women wear Sentinel's own female meshes. `Sentinel - 3BA.esp` (light, points 12 armor addons at female meshes of its own) stays in the load order, since dropping it would move `evgnnsmpaccessories.esp`'s light slot; those 12 use the meshes it ships, unbuilt. Sentinel's Bosmer, Wild Hunt and Bandolier female meshes and its Orc Berserker 1st person ones are Skyrim LE files, which crash SE |
 | [Sentinel - HIMBO Refit](https://www.nexusmods.com/skyrimspecialedition/mods/175029) | the same, male | |
 | [Mage Clothing Expansion](https://www.nexusmods.com/skyrimspecialedition/mods/128173) 2.0.1 | itself | Only `CalienteTools` installed; same version as the load order's plugin. Modest variants chosen |
 | [Moon Monk's Robes - CBBE Patch](https://www.nexusmods.com/skyrimspecialedition/mods/82495) | Moon Monk's Robes | Fixes the wrist gap with CBBE hands; the robes stay vanilla-shaped |

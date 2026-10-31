@@ -233,6 +233,25 @@ public partial class MainWindow : Window
             Log($"Couldn't point BodySlide at the Numidium game folder: {ex.Message}");
         }
 
+        try
+        {
+            var stale = await Task.Run(() => StaleOutputs.Find(gameDir));
+            if (stale.Count > 0)
+            {
+                Log($"Putting back {stale.Count} meshes BodySlide built for outfits it no longer builds...");
+                var mods = collection?.Mods ?? new List<Collection.Mod>();
+                var folders = new[] { DownloadsDir, LauncherSettings.CacheDir };
+                var archives = (await Task.Run(() => Downloads.Find(mods, folders, hashCache))).ToDictionary(kv => kv.Key.FileId, kv => kv.Value);
+                var report = new Progress<string>(Log); // made here so it reports on the window's thread
+                var count = await Task.Run(() => StaleOutputs.Restore(gameDir, stale, archives, ((IProgress<string>)report).Report));
+                Log($"Put back or removed {count} of them.");
+            }
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or InvalidDataException or System.Xml.XmlException)
+        {
+            Log($"Couldn't put back the meshes BodySlide built over: {ex.Message}");
+        }
+
         if (!Bodies.CanBuild(gameDir) || Bodies.IsUpToDate(gameDir)) return;
         try
         {

@@ -66,6 +66,7 @@ public static class Bodies
         if (File.Exists(groups)) sb.Append(File.ReadAllText(groups));
         foreach (var fileId in ModInstaller.ReadRecords(gameDir).Keys.Order()) sb.Append('|').Append(fileId);
         foreach (var (group, preset) in Builds) sb.Append('|').Append(group).Append('=').Append(preset);
+        sb.Append("|built-record"); // builds before StaleOutputs' record are redone once, to write it
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(sb.ToString()))).ToLowerInvariant();
     }
 
@@ -98,6 +99,7 @@ public static class Bodies
             if (process.ExitCode != 0) throw new InvalidOperationException($"BodySlide failed building {group} (exit code {process.ExitCode})");
         }
         File.WriteAllText(Path.Combine(gameDir, StateFile), Fingerprint(gameDir));
+        StaleOutputs.RecordBuilt(gameDir);
         log?.Invoke("Bodies and outfits built.");
     }
 }

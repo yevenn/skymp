@@ -20,6 +20,8 @@ const string Usage = """
           --dry-run                 Show what would change, write nothing.
       remove <mod>                  Removes a mod (Nexus file id or name) and its rules.
       after <mod> <other mod>       Installs <mod> after <other mod>.
+      stale-outputs <game folder>   Lists meshes BodySlide built for outfits the Numidium groups
+                                    no longer list (the launcher puts the mods' files back).
 
     The collection defaults to numidium-dev/collection.json in this repository.
     A release (numidium-dev/release.ps1) carries the changed list to players.
@@ -54,6 +56,14 @@ static async Task<int> Run(string[] args)
         return values;
     }
     bool Has(string flag) => rest.Remove(flag);
+
+    if (rest.Count > 0 && rest[0] == "stale-outputs")
+    {
+        var stale = StaleOutputs.Find(Single(rest.Skip(1).ToList(), "a game folder"));
+        foreach (var file in stale) Console.WriteLine(file);
+        Console.WriteLine($"{stale.Count} stale built files.");
+        return 0;
+    }
 
     var collectionPath = Take("--collection") ?? FindCollection()
         ?? throw new FileNotFoundException("No numidium-dev/collection.json found here or above; pass --collection.");
