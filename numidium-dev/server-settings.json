@@ -46,6 +46,7 @@
   "maxPlayers" : 100,
   "name" : "Numidium",
   "npcEnabled" : false,
+  "forbiddenReloot" : ["CONT"],
   "npcSettings" : {},
   "offlineMode" : true,
   "enableConsoleCommandsForAll" : true,

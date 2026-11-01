@@ -43,10 +43,12 @@ const HELP_LINES = [
   '  /ooc text — global out-of-character',
   '  /roll [XdY] — roll dice nearby, e.g. /roll 2d6',
   '  /names — hide or show the names above heads (or F1)',
+  '  G — animations (Space stops them)',
   '  /id — your own ID',
   '  /faction (or /f) — your factions; /f help for the rest',
   'Enter opens the chat, Esc closes it.',
   'Look at someone and press X to introduce yourself. Until then, people know you by your ID.',
+  'Lock owners, Jarls and Stewards: look at a door or container and press X to manage its lock.',
 ];
 
 // ---------------------------------------------------------------------------
@@ -642,6 +644,15 @@ const KNOWN_UPDATE_OWNER = `
 const UI_UPDATE_OWNER = `
   const st = globalThis.numidiumShared = globalThis.numidiumShared || {};
   st.rpNamesHidden = !!(ctx.value && ctx.value.namesHidden);
+  st.rpCanLock = !!(ctx.value && ctx.value.canLock);
+  st.rpOwnedLocks = ctx.value && Array.isArray(ctx.value.ownedLocks) ? ctx.value.ownedLocks : [];
+`;
+
+// A menu the server built for something under the crosshair (a door, a container),
+// answering the input event source's request with the same nonce
+const MENU_UPDATE_OWNER = `
+  const st = globalThis.numidiumShared = globalThis.numidiumShared || {};
+  st.rpMenuOffer = ctx.value && typeof ctx.value === 'object' ? ctx.value : null;
 `;
 
 // Runs in the browser: the interaction menu for a player under the crosshair.
@@ -661,15 +672,35 @@ function browserInteractMenu(data) {
   title.textContent = data.title;
   title.style.cssText = 'font-size:2.4vh;text-align:center;margin-bottom:1vh;letter-spacing:0.05vh;';
   menu.appendChild(title);
-  var pick = function (key) { sp.sendMessage('rpinteract:pick', key); };
+  if (data.subtitle) {
+    var subtitle = document.createElement('div');
+    subtitle.textContent = data.subtitle;
+    subtitle.style.cssText = 'font-size:1.55vh;color:#c8c8c8;text-align:center;margin:-0.4vh 0 1vh;max-width:40vh;';
+    menu.appendChild(subtitle);
+  }
+  var pick = function (key, text) { sp.sendMessage('rpinteract:pick', key, text || ''); };
+  var buttonStyle = 'font-size:1.85vh;padding:0.8vh 1.2vh;margin:0.5vh 0;cursor:pointer;border:1px solid rgba(255,255,255,0.12);' +
+    'background:rgba(255,255,255,0.04);text-align:center;';
   data.actions.forEach(function (action) {
     var button = document.createElement('div');
     button.textContent = action.text;
-    button.style.cssText = 'font-size:1.85vh;padding:0.8vh 1.2vh;margin:0.5vh 0;cursor:pointer;border:1px solid rgba(255,255,255,0.12);' +
-      'background:rgba(255,255,255,0.04);text-align:center;';
+    button.style.cssText = buttonStyle;
     button.onmouseenter = function () { button.style.background = 'rgba(255,255,255,0.16)'; };
     button.onmouseleave = function () { button.style.background = 'rgba(255,255,255,0.04)'; };
-    button.onclick = function () { pick(action.key); };
+    // An action with input asks for a line of text first (Enter sends it)
+    button.onclick = function () {
+      if (!action.input) return pick(action.key);
+      var field = document.createElement('input');
+      field.placeholder = action.input;
+      field.maxLength = 40;
+      field.style.cssText = buttonStyle + 'display:block;width:100%;box-sizing:border-box;cursor:text;outline:none;' +
+        'color:#fafafa;font-family:inherit;font-weight:600;';
+      field.onkeydown = function (e) {
+        if (e.key === 'Enter' && field.value.trim()) pick(action.key, field.value.trim());
+      };
+      menu.replaceChild(field, button);
+      field.focus();
+    };
     menu.appendChild(button);
   });
   var hint = document.createElement('div');
@@ -694,16 +725,31 @@ const PLAYER_ACTIONS = [
 ];
 
 // Runs once per client: F1 toggles names; X on another player opens the
-// interaction menu; labels of players no longer near are hidden.
+// interaction menu, and on a door or container asks the server for its menu
+// (for those who can lock things); labels of players no longer near are hidden.
 const INPUT_EVENT_SOURCE = `try {` + NAMES_HUD_SRC + `
   const KEY_F1 = 0x3B;
   const KEY_X = 0x2D;
   const MENU_SRC = ${JSON.stringify(INTERACT_MENU_SRC)};
   const ACTIONS = ${JSON.stringify(PLAYER_ACTIONS)};
+  const FORM_TYPE_CONTAINER = 28;
+  const FORM_TYPE_DOOR = 29;
+  const MENU_WAIT_MS = 3000;
   const sp = ctx.sp;
   const st = shared();
   const down = {};
   let menuTarget = null;
+  let menuWait = null; // { nonce, until } of a menu asked of the server
+  const isLockable = (ref) => {
+    const base = ref.getBaseObject();
+    const type = base ? base.getType() : 0;
+    return type === FORM_TYPE_CONTAINER || type === FORM_TYPE_DOOR;
+  };
+  const openMenu = (target, data) => {
+    menuTarget = target;
+    sp.browser.setFocused(true);
+    sp.browser.executeJavaScript(MENU_SRC + '(' + JSON.stringify(data) + ')');
+  };
   const pressed = (key) => {
     const isDown = sp.Input.isKeyPressed(key);
     const was = down[key];
@@ -719,12 +765,87 @@ const INPUT_EVENT_SOURCE = `try {` + NAMES_HUD_SRC + `
   sp.on('browserMessage', (e) => {
     const key = e.arguments[0];
     if (key === 'rpinteract:pick' && menuTarget !== null) {
-      ctx.sendEvent({ type: 'interact', action: e.arguments[1], target: menuTarget });
+      ctx.sendEvent({ type: 'interact', action: e.arguments[1], text: e.arguments[2] || '', target: menuTarget });
       closeMenu();
     } else if (key === 'rpinteract:close') {
       closeMenu();
     }
   });
+  // "X Menu" beside the player under the crosshair, made in the HUD like the labels:
+  // a key drawn with the drawing API, and copies of the Letter symbol for text
+  const PROMPT = '_root.numidiumPrompt';
+  const PROMPT_LABEL = 'Menu';
+  const KEY_SIZE = 20;
+  const KEY_TEXT = 15;
+  const LABEL_TEXT = 17;
+  const PROMPT_WIDTH = KEY_SIZE + 6 + PROMPT_LABEL.length * LABEL_TEXT * 0.6;
+  const PROMPT_NODE = 'NPC Spine2 [Spn2]';
+  let promptMade = false;
+  let promptShown = false;
+  const makePrompt = () => {
+    promptMade = true;
+    sp.Ui.invokeStringA(HUD, '_root.createEmptyMovieClip', ['numidiumPrompt', '-16199']);
+    sp.Ui.invokeStringA(HUD, PROMPT + '.createEmptyMovieClip', ['key', '1']);
+    const key = PROMPT + '.key';
+    sp.Ui.invokeFloatA(HUD, key + '.lineStyle', [1.5, 0xFAFAFA, 90]);
+    sp.Ui.invokeFloatA(HUD, key + '.beginFill', [0x0C0C0E, 70]);
+    sp.Ui.invokeFloatA(HUD, key + '.moveTo', [0, 0]);
+    for (const [x, y] of [[KEY_SIZE, 0], [KEY_SIZE, KEY_SIZE], [0, KEY_SIZE], [0, 0]]) sp.Ui.invokeFloatA(HUD, key + '.lineTo', [x, y]);
+    sp.Ui.invokeFloatA(HUD, key + '.endFill', []);
+    let depth = 2;
+    // Text centered on (cx, cy) inside the prompt, outlined in black like the labels
+    const text = (value, size, color, cx, cy, outline) => {
+      const scale = size / SYMBOL_FONT_SIZE;
+      const copies = (outline ? OUTLINE : []).concat([[0, 0]]);
+      copies.forEach(([dx, dy], k) => {
+        const name = 'text' + depth;
+        const clip = PROMPT + '.' + name;
+        sp.Ui.invokeStringA(HUD, PROMPT + '.attachMovie', [SYMBOL, name, String(depth++)]);
+        sp.Ui.setFloat(HUD, clip + '._xscale', 100 * scale);
+        sp.Ui.setFloat(HUD, clip + '._yscale', 100 * scale);
+        sp.Ui.setString(HUD, clip + '.' + SYMBOL_FIELD + '.autoSize', 'center');
+        sp.Ui.setFloat(HUD, clip + '.' + SYMBOL_FIELD + '.textColor', k < copies.length - 1 ? 0x000000 : color);
+        sp.Ui.setString(HUD, clip + '.' + SYMBOL_FIELD + '.text', value);
+        sp.Ui.setFloat(HUD, clip + '._x', cx - SYMBOL_CENTER * scale + dx);
+        sp.Ui.setFloat(HUD, clip + '._y', cy - SYMBOL_FONT_SIZE * scale / 2 + dy);
+        if (k < copies.length - 1) sp.Ui.setFloat(HUD, clip + '._alpha', 85);
+      });
+    };
+    text('X', KEY_TEXT, 0xFAFAFA, KEY_SIZE / 2, KEY_SIZE / 2, false);
+    text(PROMPT_LABEL, LABEL_TEXT, 0xFAFAFA, PROMPT_WIDTH - (PROMPT_WIDTH - KEY_SIZE - 6) / 2, KEY_SIZE / 2, true);
+  };
+  const setPromptVisible = (visible) => {
+    if (promptShown === visible) return;
+    promptShown = visible;
+    // Both ways, as for the labels
+    sp.Ui.setBool(HUD, PROMPT + '._visible', visible);
+    sp.Ui.setFloat(HUD, PROMPT + '._visible', visible ? 1 : 0);
+  };
+  // Puts the prompt's left middle at (x, y), kept on screen
+  const placePrompt = (rect, x, y) => {
+    if (!promptMade) makePrompt();
+    sp.Ui.setFloat(HUD, PROMPT + '._x', Math.min(x, rect.x + rect.w - PROMPT_WIDTH - 10));
+    sp.Ui.setFloat(HUD, PROMPT + '._y', y - KEY_SIZE / 2);
+    setPromptVisible(true);
+  };
+  // Right of a player's chest, at a distance that keeps with their size on screen
+  const showPromptAtActor = (ref) => {
+    const at = (dz) => [
+      sp.NetImmerse.getNodeWorldPositionX(ref, PROMPT_NODE, false),
+      sp.NetImmerse.getNodeWorldPositionY(ref, PROMPT_NODE, false),
+      sp.NetImmerse.getNodeWorldPositionZ(ref, PROMPT_NODE, false) + dz,
+    ];
+    const [chest, above] = sp.worldPointToScreenPoint(at(0), at(40));
+    if (!chest || !above || chest[2] <= 0 || above[2] <= 0) return setPromptVisible(false);
+    const rect = stageRect(sp, st);
+    const perUnit = Math.abs(above[1] - chest[1]) * rect.h / 40;
+    placePrompt(rect, rect.x + chest[0] * rect.w + 24 * perUnit, rect.y + (1 - chest[1]) * rect.h);
+  };
+  // Right of the crosshair, for doors and containers (above the game's own "Open" prompt)
+  const showPromptAtCrosshair = () => {
+    const rect = stageRect(sp, st);
+    placePrompt(rect, rect.x + rect.w / 2 + 30, rect.y + rect.h / 2);
+  };
   let reportAt = 0;
   let xReports = 0;
   sp.on('update', () => {
@@ -744,20 +865,38 @@ const INPUT_EVENT_SOURCE = `try {` + NAMES_HUD_SRC + `
         st.rpNamesHidden = !st.rpNamesHidden;
         ctx.sendEvent({ type: 'toggleNames' });
       }
+      const ref = sp.Game.getCurrentCrosshairRef();
+      const serverId = ref ? ctx.getFormIdInServerFormat(ref.getFormID()) : null;
+      const seen = serverId !== null ? (st.rpSeen || {})[serverId] : null;
+      const onPlayer = !!seen && now - seen.at <= 1000;
+      // Doors and containers from the game's files (ids below 0xFF000000)
+      const mayLock = !!st.rpCanLock || (st.rpOwnedLocks || []).includes(serverId);
+      const onLockable = !onPlayer && mayLock && !!ref && serverId !== null && serverId < 0xFF000000 && isLockable(ref);
+      const free = !typing && menuTarget === null && !st.rpNamesHidden;
+      if (free && onPlayer) showPromptAtActor(ref);
+      else if (free && onLockable) showPromptAtCrosshair();
+      else setPromptVisible(false);
+      const offer = st.rpMenuOffer;
+      if (menuWait && offer && offer.nonce === menuWait.nonce && menuTarget === null && !typing) {
+        menuWait = null;
+        openMenu(offer.target, { title: offer.title, subtitle: offer.subtitle, actions: offer.actions });
+      } else if (menuWait && now > menuWait.until) {
+        menuWait = null;
+      }
       if (pressed(KEY_X) && !typing && menuTarget === null) {
-        const ref = sp.Game.getCurrentCrosshairRef();
-        const serverId = ref ? ctx.getFormIdInServerFormat(ref.getFormID()) : null;
-        const seen = serverId !== null ? (st.rpSeen || {})[serverId] : null;
         if (xReports < 5) {
           xReports++;
           report(st, 'x: ' + JSON.stringify({ ref: ref ? ref.getFormID().toString(16) : null, serverId,
             seen: seen ? now - seen.at : null, seenIds: Object.keys(st.rpSeen || {}) }));
         }
-        if (!seen || now - seen.at > 1000) return; // not a player
-        menuTarget = serverId;
+        if (onLockable) {
+          menuWait = { nonce: Math.random().toString(36).slice(2), until: now + MENU_WAIT_MS };
+          ctx.sendEvent({ type: 'objectMenu', target: serverId, nonce: menuWait.nonce });
+          return;
+        }
+        if (!onPlayer) return;
         const name = (st.rpKnown || {})[serverId];
-        sp.browser.setFocused(true);
-        sp.browser.executeJavaScript(MENU_SRC + '(' + JSON.stringify({ title: name ? name + ' (' + seen.id + ')' : seen.id, actions: ACTIONS }) + ')');
+        openMenu(serverId, { title: name ? name + ' (' + seen.id + ')' : seen.id, actions: ACTIONS });
       }
     } catch (e) {
       report(st, 'input: ' + (e && e.stack || e));
@@ -804,10 +943,347 @@ mp._rpInput = (actorId, data) => {
     } else if (data.type === 'interact') {
       if (data.action === 'introduce' && typeof data.target === 'number') introduce(actorId, data.target);
       else if (data.action === 'introduceAll') introduceToAll(actorId);
+      else if (typeof data.action === 'string' && typeof data.target === 'number') lockAction(actorId, data.target, data.action, data.text);
+    } else if (data.type === 'objectMenu' && typeof data.target === 'number' && typeof data.nonce === 'string') {
+      sendLockMenu(actorId, data.target, data.nonce.slice(0, 32));
     }
   } catch (e) {
     console.error('[identity] failed to handle input', e);
   }
+};
+
+// ---------------------------------------------------------------------------
+// Animations (G)
+// ---------------------------------------------------------------------------
+//
+// G opens a list of the game's own idle animations; picking one plays it on the
+// player, in third person with movement frozen, until Space. SkyMP already sends a
+// player's animation events to everyone near (sync/animation.ts), so nothing here
+// goes through the server. Like SkyMP's own animation service
+// (sweetCameraEnforcementService.ts, which needs a SweetPie plugin we don't have).
+//
+// Each entry: event (the idle's animation event in Skyrim.esm's IDLE records),
+// exit (default IdleForceDefaultState), and every (ms) for gestures that play once:
+// they're sent again on that beat, so they loop too.
+
+const ANIMATIONS = [
+  ['Sitting and lying', [
+    ['sit-ground', 'Sit on the ground', 'IdleSitCrossLeggedEnter'],
+    ['sit-ledge', 'Sit on a ledge', 'IdleSitLedgeEnter'],
+    ['meditate', 'Meditate', 'IdleGreybeardMeditateEnter'],
+    ['lie-down', 'Lie down', 'IdleLayDownEnter'],
+    ['wounded-1', 'Lie wounded (1)', 'IdleWounded_01'],
+    ['wounded-2', 'Lie wounded (2)', 'IdleWounded_02'],
+    ['wounded-3', 'Lie wounded (3)', 'IdleWounded_03'],
+  ]],
+  ['Kneeling and prayer', [
+    ['kneel', 'Kneel', 'IdleKneelingEnter'],
+    ['kneel-pray', 'Kneel in prayer', 'IdlePrayCrouchedEnter'],
+    ['kneel-shrine', 'Kneel at a shrine', 'IdleBlessingKneelEnter'],
+    ['kneel-bound', 'Kneel bound (prisoner)', 'IdleBoundKneesStart'],
+    ['fall-knees', 'Fall to your knees', 'IdleDLC02FallOnKnees'],
+    ['search-body', 'Search a body', 'IdleKneeling'],
+    ['pray', 'Pray standing', 'IdlePray', { every: 6000 }],
+    ['mourn', 'Bow your head in mourning', 'IdleGrave_01', { every: 8000 }],
+    ['bow', 'Bow', 'IdleSilentBow', { every: 4000 }],
+  ]],
+  ['Leaning', [
+    ['lean-wall', 'Lean against a wall', 'IdleWallLeanStart'],
+    ['lean-rail', 'Lean on a railing', 'IdleRailLeanEnter'],
+    ['lean-table', 'Lean on a table', 'IdleLeanTableEnter'],
+    ['wall-soldier', 'Stand guard against a wall', 'IdleWallSoldierEnter'],
+  ]],
+  ['Standing', [
+    ['arms-crossed', 'Cross your arms', 'OffsetArmsCrossedStart', { exit: 'OffsetStop' }],
+    ['hands-back', 'Hands behind your back', 'IdleHandsBehindBack', { every: 6000 }],
+    ['attention', 'Stand at attention', 'IdleSnapToAttention', { every: 6000 }],
+    ['warm-hands', 'Warm your hands by the fire', 'IdleWarmHandsStanding'],
+    ['warm-crouched', 'Crouch by the fire', 'IdleWarmHandsCrouched'],
+    ['cold', 'Rub your arms (cold)', 'IdleWarmArms', { every: 5000 }],
+    ['look-far', 'Look into the distance', 'IdleLookFar', { every: 6000 }],
+    ['examine', 'Examine something', 'IdleExamine', { every: 6000 }],
+    ['think', 'Think (hand on chin)', 'IdleDialogueHandOnChinGesture', { every: 4000 }],
+    ['nervous', 'Fidget nervously', 'IdleNervous', { every: 5000 }],
+    ['wipe-brow', 'Wipe your brow', 'IdleWipeBrow', { every: 4000 }],
+    ['cough', 'Cough', 'IdleUncontrollableCough', { every: 5000 }],
+    ['pain', 'Hold your side in pain', 'IdleBracedPain', { every: 5000 }],
+    ['cower', 'Cower in fear', 'IdleCowerEnter'],
+    ['surrender', 'Raise your hands (surrender)', 'IdleSurrender', { every: 5000 }],
+    ['doze', 'Doze off on your feet', 'IdleSleepNod', { every: 6000 }],
+    ['ponder', 'Ponder', 'IdleStudy', { every: 6000 }],
+    ['injured', 'Injured stance', 'IdleInjured'],
+    ['drunk', 'Drunken sway', 'DrunkStart', { exit: 'DrunkStop' }],
+  ]],
+  ['Poses', [
+    ['pose-1', 'Pose (1)', 'IdleStaticPoseAStart'],
+    ['pose-2', 'Pose (2)', 'IdleStaticPoseBStart'],
+    ['pose-3', 'Pose (3)', 'IdleStaticPoseCStart'],
+  ]],
+  ['Gestures', [
+    ['wave', 'Wave', 'IdleWave', { every: 3000 }],
+    ['salute', 'Salute', 'IdleSalute', { every: 4000 }],
+    ['beckon', 'Beckon (come this way)', 'IdleComeThisWay', { every: 3000 }],
+    ['point', 'Point', 'IdlePointClose', { every: 3000 }],
+    ['call', 'Call for attention', 'IdleGetAttention', { every: 3000 }],
+    ['laugh', 'Laugh', 'IdleLaugh', { every: 4000 }],
+    ['applaud', 'Applaud', 'IdleApplaud2', { every: 4000 }],
+    ['slow-clap', 'Slow clap (sarcastic)', 'IdleApplaudSarcastic', { every: 4000 }],
+    ['cheer', 'Cheer', 'IdleCivilWarCheer', { every: 4000 }],
+  ]],
+  ['Work and daily life', [
+    ['sweep', 'Sweep the floor', 'idleLooseSweepingStart'],
+    ['hoe', 'Hoe the soil', 'IdleHoe'],
+    ['feed-chickens', 'Feed the chickens', 'IdleFeedChicken'],
+    ['read-book', 'Read a book', 'IdleBook_Read'],
+    ['read-note', 'Read a note', 'IdleNoteRead', { every: 6000 }],
+    ['rummage', 'Rummage through something', 'IdleSearchingChest'],
+    ['drink', 'Drink', 'idleDrinkingStandingStart'],
+    ['drink-bar', 'Drink at the bar', 'idleBarDrinkingStart'],
+    ['sip', 'Take a sip', 'IdleDrink', { every: 5000 }],
+    ['fountain', 'Drink from a fountain', 'IdleDrinkFromFountain', { every: 6000 }],
+    ['eat', 'Eat', 'idleEatingStandingStart'],
+    ['ledger', 'Write in a ledger', 'IdleWriteLedgerEnter'],
+    ['search-table', 'Search a table', 'IdleSearchingTable'],
+    ['lockpick', 'Pick a lock', 'IdleLockPick', { every: 5000 }],
+    ['sconce', 'Light a sconce', 'IdleLightSconce', { every: 5000 }],
+  ]],
+  ['Labour', [
+    ['chisel-standing', 'Chisel (standing)', 'IdleChiselStandingEnter'],
+    ['chisel-kneeling', 'Chisel (kneeling)', 'IdleChiselKneelingEnter'],
+    ['mine-wall', 'Mine a rock face', 'IdlePickaxeEnter'],
+    ['mine-floor', 'Mine the ground', 'IdlePickaxeFloorEnter'],
+    ['hammer-wall', 'Hammer a wall', 'IdleHammerWallEnter'],
+    ['fill-bucket', 'Fill a bucket', 'IdleCarryBucketFillEnter'],
+    ['scoop-water', 'Scoop water', 'IdleWayShrineWaterScoopEnter'],
+  ]],
+  ['Prisoners and dark deeds', [
+    ['execution-block', "Kneel at the executioner's block", 'IdleExecutioneeIdle'],
+    ['execution-guard', 'Guard an execution', 'IdleExecutionGuardIdle'],
+    ['shackled', 'Shackled to a wall', 'IdleShackleWallEnterInstant'],
+    ['cut-hand', 'Cut your hand (blood ritual)', 'IdleHandCut', { every: 6000 }],
+    ['feed-crouching', 'Feed on a corpse (crouching)', 'IdleCannibalFeedCrouching'],
+    ['feed-standing', 'Feed on a corpse (standing)', 'IdleCannibalFeedStanding'],
+  ]],
+  ['Music and dance', [
+    ['lute', 'Play the lute', 'IdleLuteStart'],
+    ['flute', 'Play the flute', 'IdleFluteStart'],
+    ['drum', 'Play the drum', 'IdleDrumStart'],
+    ['horn', 'Blow a horn', 'IdleBlowHornImperial', { every: 6000 }],
+    ['jig-1', 'Dance a jig (1)', 'IdleCiceroDance1', { every: 6000 }],
+    ['jig-2', 'Dance a jig (2)', 'IdleCiceroDance2', { every: 6000 }],
+    ['jig-3', 'Dance a jig (3)', 'IdleCiceroDance3', { every: 6000 }],
+  ]],
+].map(([category, items]) => ({
+  category,
+  items: items.map(([key, name, event, options]) => ({ key, name, event, exit: 'IdleForceDefaultState', every: 0, ...options })),
+}));
+
+// Runs in the browser: the animation list, or nothing (data null)
+function browserAnimMenu(data) {
+  var sp = window.skyrimPlatform;
+  var old = document.getElementById('rp-anims');
+  if (old) old.remove();
+  if (!data) return;
+  var panel = document.createElement('div');
+  panel.id = 'rp-anims';
+  // Sizes in vh, like the interaction menu
+  panel.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);width:62vh;max-height:78vh;display:flex;flex-direction:column;' +
+    'padding:1.4vh 1.6vh;background:rgba(12,12,14,0.88);border:1px solid rgba(255,255,255,0.2);border-radius:0.6vh;z-index:99999;' +
+    "font-family:'Segoe UI',Tahoma,Arial,sans-serif;font-weight:600;color:#fafafa;text-shadow:0 0 0.4vh #000;";
+  var title = document.createElement('div');
+  title.textContent = 'Animations';
+  title.style.cssText = 'font-size:2.4vh;text-align:center;margin-bottom:1vh;letter-spacing:0.05vh;';
+  panel.appendChild(title);
+  var search = document.createElement('input');
+  search.placeholder = 'Search';
+  search.style.cssText = 'font-size:1.8vh;padding:0.7vh 1vh;margin-bottom:1vh;border:1px solid rgba(255,255,255,0.2);background:rgba(255,255,255,0.06);' +
+    'color:#fafafa;font-family:inherit;font-weight:600;outline:none;';
+  panel.appendChild(search);
+  var list = document.createElement('div');
+  list.style.cssText = 'overflow-y:auto;flex:1;padding-right:0.6vh;';
+  panel.appendChild(list);
+  var sections = [];
+  data.categories.forEach(function (category) {
+    var header = document.createElement('div');
+    header.textContent = category.category;
+    header.style.cssText = 'font-size:1.6vh;color:#c8c8c8;margin:1vh 0 0.5vh;text-transform:uppercase;letter-spacing:0.15vh;';
+    var grid = document.createElement('div');
+    grid.style.cssText = 'display:grid;grid-template-columns:1fr 1fr;gap:0.5vh;';
+    var buttons = category.items.map(function (item) {
+      var button = document.createElement('div');
+      button.textContent = item.name;
+      button.style.cssText = 'font-size:1.75vh;padding:0.75vh 1vh;cursor:pointer;border:1px solid rgba(255,255,255,0.12);background:rgba(255,255,255,0.04);';
+      button.onmouseenter = function () { button.style.background = 'rgba(255,255,255,0.16)'; };
+      button.onmouseleave = function () { button.style.background = 'rgba(255,255,255,0.04)'; };
+      button.onclick = function () { sp.sendMessage('rpanim:play', item.key); };
+      grid.appendChild(button);
+      return { button: button, name: item.name.toLowerCase() };
+    });
+    list.appendChild(header);
+    list.appendChild(grid);
+    sections.push({ header: header, grid: grid, buttons: buttons });
+  });
+  search.oninput = function () {
+    var text = search.value.trim().toLowerCase();
+    sections.forEach(function (section) {
+      var shown = 0;
+      section.buttons.forEach(function (b) {
+        var match = !text || b.name.indexOf(text) !== -1;
+        b.button.style.display = match ? '' : 'none';
+        if (match) shown++;
+      });
+      section.header.style.display = shown ? '' : 'none';
+      section.grid.style.display = shown ? '' : 'none';
+    });
+  };
+  var hint = document.createElement('div');
+  hint.textContent = 'Space stops the animation · Esc to close';
+  hint.style.cssText = 'font-size:1.35vh;color:#a8a8a8;text-align:center;margin-top:1vh;';
+  panel.appendChild(hint);
+  document.body.appendChild(panel);
+  search.focus();
+  var onKey = function (e) {
+    if (e.key === 'Escape') {
+      document.removeEventListener('keydown', onKey);
+      sp.sendMessage('rpanim:close');
+    }
+  };
+  document.addEventListener('keydown', onKey);
+}
+
+const ANIM_MENU_SRC = '(' + browserAnimMenu.toString() + ')';
+
+// Runs once per client: G opens the list, a pick plays it, Space stops it
+const ANIM_EVENT_SOURCE = `try {
+  const KEY_G = 0x22;
+  const KEY_SPACE = 0x39;
+  const CAMERA_FIRST_PERSON = 0;
+  const CONTROLS_BACK_MS = 500; // after the exit animation starts, as SkyMP's own service does
+  const MENU_SRC = ${JSON.stringify(ANIM_MENU_SRC)};
+  const CATEGORIES = ${JSON.stringify(ANIMATIONS)};
+  const sp = ctx.sp;
+  const st = globalThis.numidiumShared = globalThis.numidiumShared || {};
+  const byKey = {};
+  for (const category of CATEGORIES) for (const anim of category.items) byKey[anim.key] = anim;
+  // Movement, fighting, camera switch, sneaking and activating: frozen while animating
+  const controls = [true, true, true, false, true, false, true, false, 0];
+  const down = {};
+  const pressed = (key) => {
+    const isDown = sp.Input.isKeyPressed(key);
+    const was = down[key];
+    down[key] = isDown;
+    return isDown && !was;
+  };
+  let menuOpen = false;
+  let pending = null; // a pick, started once the browser's focus (a menu, pausing the game) is gone
+  let playing = null; // { anim, next, thirdPerson } while an animation plays
+  let controlsBackAt = 0;
+  let reports = 0;
+  const report = (line) => {
+    if (reports++ < 20) ctx.sendEvent({ type: 'report', lines: ['anim: ' + line] });
+  };
+  // A game reloaded mid-animation (the event source starts again) gets its controls back
+  if (st.rpAnimControlsOff) {
+    sp.Game.enablePlayerControls(...controls);
+    st.rpAnimControlsOff = false;
+  }
+  const closeMenu = () => {
+    menuOpen = false;
+    sp.browser.executeJavaScript(MENU_SRC + '(null)');
+    sp.browser.setFocused(false);
+    sp.browser.executeJavaScript("window.dispatchEvent(new Event('skymp5-client:browserUnfocused'))");
+  };
+  const stop = () => {
+    if (!playing) return;
+    sp.Debug.sendAnimationEvent(sp.Game.getPlayer(), playing.anim.exit);
+    playing = null;
+    controlsBackAt = Date.now() + CONTROLS_BACK_MS;
+  };
+  // Why an animation can't start now, or null
+  const blocker = (player) => {
+    if (player.isWeaponDrawn()) return 'Sheathe your weapon first.';
+    if (player.getFurnitureReference()) return 'Get up first.';
+    if (player.isSneaking()) return 'Stop sneaking first.';
+    if (player.isSwimming()) return "You can't do that while swimming.";
+    if (player.getAnimationVariableBool('bInJumpState')) return "You can't do that mid-jump.";
+    if (player.isOnMount()) return 'Dismount first.';
+    return null;
+  };
+  const play = (anim) => {
+    const player = sp.Game.getPlayer();
+    const reason = blocker(player);
+    if (reason) {
+      report(anim.key + ' refused: ' + reason);
+      return sp.Debug.notification(reason);
+    }
+    if (playing && playing.anim.exit !== anim.exit) sp.Debug.sendAnimationEvent(player, playing.anim.exit);
+    const camera = sp.Game.getCameraState();
+    sp.Game.forceThirdPerson();
+    sp.Game.disablePlayerControls(...controls);
+    st.rpAnimControlsOff = true;
+    controlsBackAt = 0;
+    sp.Debug.sendAnimationEvent(player, anim.event);
+    playing = { anim, next: anim.every ? Date.now() + anim.every : 0, thirdPerson: false };
+    report('play ' + anim.key + ' (' + anim.event + '), camera was ' + camera);
+    sp.Debug.notification('Space to stop the animation');
+  };
+  sp.on('browserMessage', (e) => {
+    const key = e.arguments[0];
+    if (key === 'rpanim:play' && menuOpen) {
+      closeMenu();
+      pending = byKey[e.arguments[1]] || null;
+    } else if (key === 'rpanim:close') {
+      closeMenu();
+    }
+  });
+  sp.on('update', () => {
+    try {
+      const now = Date.now();
+      if (controlsBackAt && now >= controlsBackAt) {
+        controlsBackAt = 0;
+        sp.Game.enablePlayerControls(...controls);
+        st.rpAnimControlsOff = false;
+      }
+      const typing = sp.browser.isFocused() || sp.Utility.isInMenuMode();
+      if (pending && !typing) {
+        const anim = pending;
+        pending = null;
+        play(anim);
+      }
+      if (playing) {
+        // Space stops it; so does going back to first person (the switch to third
+        // takes a few frames), where the pose can't be seen
+        const firstPerson = sp.Game.getCameraState() === CAMERA_FIRST_PERSON;
+        if (!firstPerson) playing.thirdPerson = true;
+        if ((pressed(KEY_SPACE) && !typing) || (firstPerson && playing.thirdPerson)) {
+          report('stop ' + playing.anim.key + (firstPerson ? ' (first person)' : ''));
+          stop();
+        } else if (playing.next && now >= playing.next && !typing) {
+          sp.Debug.sendAnimationEvent(sp.Game.getPlayer(), playing.anim.event);
+          playing.next = now + playing.anim.every;
+        }
+      } else {
+        pressed(KEY_SPACE);
+      }
+      if (pressed(KEY_G) && !typing && !menuOpen) {
+        menuOpen = true;
+        sp.browser.setFocused(true);
+        sp.browser.executeJavaScript(MENU_SRC + '(' + JSON.stringify({ categories: CATEGORIES }) + ')');
+      }
+    } catch (e) {
+      ctx.sendEvent({ type: 'report', lines: ['anim: ' + (e && e.stack || e)] });
+    }
+  });
+} catch (e) {
+  ctx.sendEvent({ type: 'report', lines: ['anim: failed to start: ' + (e && e.stack || e)] });
+}
+`;
+
+mp.makeEventSource('_rpAnim', ANIM_EVENT_SOURCE);
+
+mp._rpAnim = (actorId, data) => {
+  if (!data || data.type !== 'report' || !Array.isArray(data.lines)) return;
+  for (const line of data.lines.slice(0, 5)) console.log(`[client] ${getName(actorId)} [${getCharId(actorId)}]: ${String(line).slice(0, 800)}`);
 };
 
 // ---------------------------------------------------------------------------
@@ -1076,7 +1552,7 @@ const toggleBodyDouble = (actorId) => {
 //   recruit  invite people, to ranks below one's own
 //   dismiss  remove members ranked below one's own
 //   promote  change the rank of members below one's own, to ranks below it
-//   property grant house and storage rights (not built yet)
+//   property put locks on doors and containers, and give them owners (any Jarldom)
 //   cuff     cuff people (not built yet)
 // Only people ranked below you can be acted on, and only ranks below yours given.
 // Admins (numidiumAuth.admins) rank above everyone, in every faction.
@@ -1181,7 +1657,10 @@ try {
   factionData = null;
 }
 
-const saveFactions = () => saveFactionsTo(factionData);
+const saveFactions = () => {
+  saveFactionsTo(factionData);
+  refreshLockRights(); // ranks may have changed who can put locks on
+};
 
 const factionLog = (text) => console.log(`[faction] ${text}`);
 
@@ -1945,6 +2424,7 @@ mp._rpChatJoin = (actorId) => {
     ensureIdentity(actorId);
     refreshKnown(actorId);
     grantCraftingPerks(actorId);
+    refreshLockRights(actorId);
     if (isAdmin(actorId)) {
       mp.set(actorId, 'consoleCommandsAllowed', true);
       console.log(`[numidium] ${getName(actorId)} (${actorId.toString(16)}) is an admin: dev commands and console on`);
@@ -1998,6 +2478,251 @@ mp._rpBodySave = (actorId, data) => {
     if (typeof doubleId === 'number') saveBody(doubleId, body);
   } catch (e) {
     console.error('[body] failed to save body', e);
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Containers and locks
+// ---------------------------------------------------------------------------
+//
+// Containers from the game's files start empty: the first time one is opened,
+// what the game would put in it is dropped (private.rpEmptied marks it done), and
+// server-settings.json forbids relooting containers ("forbiddenReloot": ["CONT"]),
+// so whatever players put in stays and nothing refills.
+//
+// Locks are put on doors and containers (X on them) by admins, Jarls and
+// Stewards (the property permission in a Jarldom), who also give each lock an
+// owner, such as the merchant of a shop. The owner locks and unlocks it and gives
+// access to others (their employees); those who put locks on can do all that too,
+// and change the owner or take the lock off:
+//   private.rpLock on the door or container: { owner, access: [charIds], locked, by, at }
+//   private.indexed.rpLockOwner: the owner's ID ('' for none), to find their locks
+// A locked lock lets through its owner, those with access, and admins, from either
+// side: a door that leads somewhere has one lock with its other side.
+
+const LOCK_RANGE = 400;
+const MAX_LOCK_ACCESS = 30;
+const LOCKABLE_TYPES = { CONT: 'container', DOOR: 'door' };
+
+// What the game's files say about a reference: { kind, partner } for doors and
+// containers ("container" or "door", and the door at the other side), else null
+const lockableCache = new Map();
+const lockableInfo = (refId) => {
+  if (lockableCache.has(refId)) return lockableCache.get(refId);
+  let info = null;
+  if (refId > 0 && refId < 0xFF000000) {
+    const ref = mp.lookupEspmRecordById(refId);
+    const fields = ref.record && ref.record.type === 'REFR' ? ref.record.fields : [];
+    const u32 = (field) => new DataView(field.data.buffer, field.data.byteOffset, field.data.byteLength).getUint32(0, true);
+    const name = fields.find((f) => f.type === 'NAME');
+    const base = name ? mp.lookupEspmRecordById(ref.toGlobalRecordId(u32(name))) : null;
+    const kind = base && base.record ? LOCKABLE_TYPES[base.record.type] : undefined;
+    if (kind) {
+      const teleport = kind === 'door' ? fields.find((f) => f.type === 'XTEL') : null;
+      info = { kind, partner: teleport ? ref.toGlobalRecordId(u32(teleport)) : null };
+    }
+  }
+  lockableCache.set(refId, info);
+  return info;
+};
+
+// The lock on a door or container, or null. Locks from before owners (a Jarldom's,
+// with no owner) read as locked, ownerless locks.
+const getLock = (refId) => {
+  const lock = mp.get(refId, 'private.rpLock');
+  if (!lock || typeof lock !== 'object') return null;
+  return {
+    owner: typeof lock.owner === 'string' ? lock.owner : null,
+    access: Array.isArray(lock.access) ? lock.access : [],
+    locked: lock.locked !== false,
+    by: lock.by,
+    at: lock.at,
+  };
+};
+
+// Puts, changes or (lock null) takes off the lock of a door with its other side,
+// or of a container
+const setLock = (refId, lock) => {
+  const info = lockableInfo(refId);
+  const write = (id) => {
+    mp.set(id, 'private.rpLock', lock);
+    mp.set(id, 'private.indexed.rpLockOwner', lock && lock.owner ? lock.owner : '');
+  };
+  write(refId);
+  if (!info || info.partner === null) return;
+  try {
+    write(info.partner);
+  } catch (e) {
+    console.error(`[lock] couldn't reach the other side ${info.partner.toString(16)} of ${refId.toString(16)}`, e);
+  }
+};
+
+const objectInRange = (actorId, refId, range) => {
+  if (mp.get(actorId, 'worldOrCellDesc') !== mp.get(refId, 'worldOrCellDesc')) return false;
+  const a = mp.get(actorId, 'pos');
+  const b = mp.get(refId, 'pos');
+  return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]) <= range;
+};
+
+// Admins, and Jarls and Stewards of any Jarldom
+const canPutLocks = (actorId) => {
+  if (isAdmin(actorId)) return true;
+  const charId = getCharId(actorId);
+  if (!charId || !factionData) return false;
+  return Object.keys(factionData.factions).some((id) => factionData.factions[id].group === 'hold'
+    && standing(charId, id).perms.has('property'));
+};
+
+const ownsLock = (actorId, lock) => lock.owner !== null && lock.owner === getCharId(actorId);
+
+const canManageLock = (actorId, lock) => ownsLock(actorId, lock) || canPutLocks(actorId);
+
+const canPassLock = (actorId, lock) => !lock.locked || isAdmin(actorId) || ownsLock(actorId, lock)
+  || lock.access.includes(getCharId(actorId));
+
+// Tells clients whether to offer X on doors and containers: everywhere for those
+// who put locks on, on their own locks for owners (see UI_UPDATE_OWNER)
+const refreshLockRights = (onlyActorId) => {
+  for (const actorId of onlyActorId === undefined ? getOnlineActors() : [onlyActorId]) {
+    const charId = getCharId(actorId);
+    const canLock = canPutLocks(actorId);
+    const ownedLocks = charId ? mp.findFormsByPropertyValue('private.indexed.rpLockOwner', charId) : [];
+    const ui = mp.get(actorId, 'rpUi') || {};
+    if (!!ui.canLock !== canLock || JSON.stringify(ui.ownedLocks || []) !== JSON.stringify(ownedLocks)) {
+      mp.set(actorId, 'rpUi', { ...ui, canLock, ownedLocks });
+    }
+  }
+};
+
+const refreshLockRightsOf = (charId) => {
+  const actorId = charId ? actorOfCharId(charId) : null;
+  if (actorId !== null && isOnline(actorId)) refreshLockRights(actorId);
+};
+
+const lockLog = (actorId, refId, text) => console.log(`[lock] ${getName(actorId)} [${getCharId(actorId)}] ${text} ${refId.toString(16)}`);
+
+// The menu for a door or container, sent back to the client that asked (rpMenu)
+const sendLockMenu = (actorId, refId, nonce) => {
+  const info = lockableInfo(refId);
+  if (!info || !objectInRange(actorId, refId, LOCK_RANGE)) return;
+  const lock = getLock(refId);
+  const putter = canPutLocks(actorId);
+  const title = info.kind === 'door' ? 'Door' : 'Container';
+  let subtitle;
+  const actions = [];
+  if (!lock) {
+    if (!putter) return;
+    subtitle = 'No lock';
+    actions.push({ key: 'put', text: 'Put a lock on it' });
+  } else {
+    if (!canManageLock(actorId, lock)) return;
+    subtitle = `${lock.locked ? 'Locked' : 'Unlocked'}. Owner: ${lock.owner ? describeChar(actorId, lock.owner) : 'nobody'}. `
+      + (lock.access.length ? `Access: ${lock.access.map((charId) => describeChar(actorId, charId)).join(', ')}` : 'Nobody else has access');
+    actions.push(lock.locked ? { key: 'unlock', text: 'Unlock' } : { key: 'lock', text: 'Lock' });
+    actions.push({ key: 'grant', text: 'Give access', input: 'ID, or the name of someone you know' });
+    for (const charId of lock.access.slice(0, 8)) actions.push({ key: `revoke:${charId}`, text: `Take access from ${describeChar(actorId, charId)}` });
+    if (putter) {
+      actions.push({ key: 'owner', text: lock.owner ? 'Change the owner' : 'Give it an owner', input: 'ID, or the name of someone you know' });
+      actions.push({ key: 'remove', text: 'Take the lock off' });
+    }
+  }
+  mp.set(actorId, 'rpMenu', { nonce, target: refId, title, subtitle, actions });
+};
+
+// The character an ID or a known name stands for, or null (after telling the actor why)
+const findCharFor = (actorId, text) => {
+  const value = String(text || '').trim();
+  if (!value) return null;
+  if (actorOfCharId(value.toUpperCase()) !== null) return value.toUpperCase();
+  const matches = idList(mp.get(actorId, 'private.rpKnows'))
+    .filter((id) => getName(id).toLowerCase() === value.toLowerCase()).map(getCharId).filter(Boolean);
+  if (matches.length === 1) return matches[0];
+  system(actorId, matches.length
+    ? `You know several people called ${value}: use their ID.`
+    : `Nobody has the ID ${value.toUpperCase()}, and you know nobody called ${value}.`);
+  return null;
+};
+
+const lockAction = (actorId, refId, action, text) => {
+  const info = lockableInfo(refId);
+  if (!info || !objectInRange(actorId, refId, LOCK_RANGE)) return;
+  const what = info.kind === 'door' ? 'door' : 'container';
+  const lock = getLock(refId);
+  const putter = canPutLocks(actorId);
+  if (action === 'put') {
+    if (lock || !putter) return;
+    setLock(refId, { owner: null, access: [], locked: true, by: getCharId(actorId), at: Date.now() });
+    lockLog(actorId, refId, 'put a lock on');
+    system(actorId, `You put a lock on the ${what}; it's locked. Press X on it again to give it an owner.`);
+    return;
+  }
+  if (!lock || !canManageLock(actorId, lock)) return;
+  if (action === 'lock' || action === 'unlock') {
+    setLock(refId, { ...lock, locked: action === 'lock' });
+    lockLog(actorId, refId, `${action}ed`);
+    system(actorId, `You ${action} the ${what}.`);
+  } else if (action === 'grant') {
+    const charId = findCharFor(actorId, text);
+    if (!charId) return;
+    if (charId === lock.owner || lock.access.includes(charId)) {
+      system(actorId, `${describeChar(actorId, charId)} can already open it.`);
+    } else if (lock.access.length >= MAX_LOCK_ACCESS) {
+      system(actorId, `At most ${MAX_LOCK_ACCESS} people can have access; take it from someone first.`);
+    } else {
+      setLock(refId, { ...lock, access: [...lock.access, charId] });
+      lockLog(actorId, refId, `gave ${charId} access to`);
+      system(actorId, `${describeChar(actorId, charId)} can now open the ${what}.`);
+    }
+  } else if (action.startsWith('revoke:')) {
+    const charId = action.slice(7);
+    if (!lock.access.includes(charId)) return;
+    setLock(refId, { ...lock, access: lock.access.filter((id) => id !== charId) });
+    lockLog(actorId, refId, `took ${charId}'s access to`);
+    system(actorId, `${describeChar(actorId, charId)} can no longer open the ${what}.`);
+  } else if (action === 'owner' && putter) {
+    const charId = findCharFor(actorId, text);
+    if (!charId || charId === lock.owner) return;
+    const before = lock.owner;
+    setLock(refId, { ...lock, owner: charId, access: lock.access.filter((id) => id !== charId) });
+    lockLog(actorId, refId, `made ${charId} the owner of`);
+    system(actorId, `${describeChar(actorId, charId)} now owns the lock of the ${what}.`);
+    refreshLockRightsOf(before);
+    refreshLockRightsOf(charId);
+  } else if (action === 'remove' && putter) {
+    setLock(refId, null);
+    lockLog(actorId, refId, 'took the lock off');
+    system(actorId, `You take the lock off the ${what}.`);
+    refreshLockRightsOf(lock.owner);
+  }
+};
+
+// The answer to a door or container's menu request, seen by its owner only
+mp.makeProperty('rpMenu', {
+  isVisibleByOwner: true,
+  isVisibleByNeighbors: false,
+  updateOwner: MENU_UPDATE_OWNER,
+  updateNeighbor: '',
+});
+
+// Every activation: locks first, then a container's first opening empties it.
+// Returning false stops the door or container from opening.
+mp.onActivate = (targetId, casterId) => {
+  try {
+    const info = lockableInfo(targetId);
+    if (!info) return true;
+    const lock = getLock(targetId);
+    if (lock && !canPassLock(casterId, lock)) {
+      system(casterId, `It's locked.`);
+      return false;
+    }
+    if (info.kind === 'container' && !mp.get(targetId, 'private.rpEmptied')) {
+      mp.set(targetId, 'inventory', { entries: [] });
+      mp.set(targetId, 'private.rpEmptied', true);
+    }
+    return true;
+  } catch (e) {
+    console.error('[lock] failed to handle activation', e);
+    return true;
   }
 };
 
