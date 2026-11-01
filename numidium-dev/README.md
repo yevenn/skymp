@@ -93,6 +93,8 @@ Installed in the test copy by `install-mods.ps1`, downloaded from Nexus by hand:
 | BodySlide and Outfit Studio | 6.0.0 | everything except `FOMod` |
 | CBBE SFW Edition | 1.1.4 | Vanilla Outfits, Face Pack, Thin + Trimmed Brows, Dirt to Beauty Marks, NeverNude underwear |
 | HIMBO V5 Core (Nevernude Body) + BG-DG-DB Refits | 5.8 / 5.8a | everything |
+| Flawn's Vanilla Argonians Redux (FVAR) - Main CBBE | 2.0 | Default female and male skin, Replacer Plus eyes, non-glowing eye mesh, clawed feet, no NPC faces (NPCs are off) |
+| Enhanced Khajiit | 1.03 | Essentials 2k, regular feet (its BodySlide feet projects are for the digitigrade ones, so they're not in our groups), Furred Abs female, Abs male; its textures win over CBBE's Khajiit ones |
 
 BodySlide groups (`bodyslide/Numidium.xml`) and why:
 

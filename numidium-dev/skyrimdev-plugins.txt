@@ -35,3 +35,6 @@ HIMBO.esp
 RaceMenuMorphsHIMBO.esp
 Sentinel - 3BA.esp
 evgnnsmpaccessories.esp
+FlawnsArgonians - Eyes, Replacer Plus.esp
+FlawnsArgonians - Clawed Feet.esp
+EnhancedKhajiit_feet.esp

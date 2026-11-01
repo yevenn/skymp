@@ -2308,6 +2308,222 @@
         "type": ""
       },
       "phase": 0
+    },
+    {
+      "name": "FVAR - Main CBBE",
+      "version": "2.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 43389,
+        "fileId": 638157,
+        "md5": "8f1c4f8e3e9e736299ab26c52a2c6e9a",
+        "fileSize": 257038984,
+        "logicalFilename": "FVAR - Main CBBE",
+        "updatePolicy": "exact",
+        "tag": "yxzQTsyOWw"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Welcome",
+            "groups": [
+              {
+                "name": ".",
+                "choices": [
+                  {
+                    "name": "Base",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Body",
+            "groups": [
+              {
+                "name": "Female Textures",
+                "choices": [
+                  {
+                    "name": "Default",
+                    "idx": 0
+                  }
+                ]
+              },
+              {
+                "name": "Male Textures",
+                "choices": [
+                  {
+                    "name": "Default",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Eyes",
+            "groups": [
+              {
+                "name": "Eye Textures",
+                "choices": [
+                  {
+                    "name": "Replacer Plus",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Eye Mesh",
+                "choices": [
+                  {
+                    "name": "Nonglowing",
+                    "idx": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Feet",
+            "groups": [
+              {
+                "name": "Foot Mesh",
+                "choices": [
+                  {
+                    "name": "Clawed",
+                    "idx": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "NPCs",
+            "groups": [
+              {
+                "name": "Facegendata",
+                "choices": [
+                  {
+                    "name": "None",
+                    "idx": 4
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Conclusion",
+            "groups": [
+              {
+                "name": ".",
+                "choices": [
+                  {
+                    "name": "Thank you for downloading...",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Lordflawn",
+      "details": {
+        "category": "Models and Textures",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Enhanced Khajiit V1.03",
+      "version": "V1.03",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 176481,
+        "fileId": 752569,
+        "md5": "e854219210070600852e547448ea7dc6",
+        "fileSize": 691550954,
+        "logicalFilename": "Enhanced Khajiit V1.03",
+        "updatePolicy": "exact",
+        "tag": "dgHSgczC5e"
+      },
+      "choices": {
+        "options": [
+          {
+            "name": "Introduction",
+            "groups": [
+              {
+                "name": "Base Files",
+                "choices": [
+                  {
+                    "name": "Essentials 2k",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Feet Options",
+                "choices": [
+                  {
+                    "name": "Regular Feet",
+                    "idx": 1
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Texture Selection 2k (Regular Feet)",
+            "groups": [
+              {
+                "name": "Female options",
+                "choices": [
+                  {
+                    "name": "Furred Abs",
+                    "idx": 1
+                  }
+                ]
+              },
+              {
+                "name": "Male options",
+                "choices": [
+                  {
+                    "name": "Abs",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "name": "Thank you",
+            "groups": [
+              {
+                "name": "We are done now!",
+                "choices": [
+                  {
+                    "name": "Iam making you accept this HAH",
+                    "idx": 0
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "type": "fomod"
+      },
+      "author": "Syllux",
+      "details": {
+        "category": "Body, Face, and Hair",
+        "type": ""
+      },
+      "phase": 0
     }
   ],
   "modRules": [
