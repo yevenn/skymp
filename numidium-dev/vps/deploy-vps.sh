@@ -9,6 +9,11 @@
 #   deploy-vps.sh settings   build the VPS settings from the local
 #                            server-settings.json (Linux paths), then restart
 #   deploy-vps.sh plugins    upload the load order's plugins, checking hashes
+#   deploy-vps.sh migrate    like settings, for a load order where plugins move
+#                            (removed, or master-flagged ones added): stops the
+#                            server, backs up the world, rewrites the saved form
+#                            ids (migrate-load-order.py), then starts it. Upload
+#                            the plugins first
 #   deploy-vps.sh data       copy the local server data folder (scripts)
 #   deploy-vps.sh world      replace the VPS world and accounts with this PC's
 #                            (the VPS ones are kept as a dated backup)
@@ -54,6 +59,22 @@ sys.stdout.write(dirs.pop())
 PY
 }
 
+# The VPS settings, built from the local server-settings.json (Linux paths).
+# Never printed: it holds the Discord client secret.
+vps_settings() {
+  # The remote folder goes without its leading "/": Git Bash would turn /opt/...
+  # into C:/Program Files/Git/opt/... on the way to Windows' python
+  python - "$local_server/server-settings.json" "${remote#/}" <<'PY'
+import json, os, sys
+s = json.load(open(sys.argv[1], encoding="utf-8"))
+remote = "/" + sys.argv[2]
+s["dataDir"] = "data"
+s["loadOrder"] = [f"{remote}/plugins/{os.path.basename(p)}" for p in s["loadOrder"]]
+s["gamemodePath"] = "gamemode.js"
+sys.stdout.buffer.write(json.dumps(s, indent=2, ensure_ascii=False).encode() + b"\n")
+PY
+}
+
 case "${1:-}" in
   server)
     ssh_vps "bash -s" <<EOF
@@ -82,21 +103,29 @@ EOF
     # Never printed: it holds the Discord client secret. Built into a private temp
     # file first, so a failure can't send an empty file, and checked on arrival.
     tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
-    # The remote folder goes without its leading "/": Git Bash would turn /opt/...
-    # into C:/Program Files/Git/opt/... on the way to Windows' python
-    python - "$local_server/server-settings.json" "${remote#/}" > "$tmp/settings.json" <<'PY'
-import json, os, sys
-s = json.load(open(sys.argv[1], encoding="utf-8"))
-remote = "/" + sys.argv[2]
-s["dataDir"] = "data"
-s["loadOrder"] = [f"{remote}/plugins/{os.path.basename(p)}" for p in s["loadOrder"]]
-s["gamemodePath"] = "gamemode.js"
-sys.stdout.buffer.write(json.dumps(s, indent=2, ensure_ascii=False).encode() + b"\n")
-PY
+    vps_settings > "$tmp/settings.json"
     ssh_vps "set -e; umask 077; cd $remote; cat > server-settings.json.new
       python3 -c 'import json,os,sys; s=json.load(open(\"server-settings.json.new\")); m=[p for p in s[\"loadOrder\"] if not os.path.exists(p)]; sys.exit(\"plugins not on the VPS: \" + \", \".join(m)) if m else None'
       chown numidium:numidium server-settings.json.new; mv server-settings.json.new server-settings.json
       echo 'server-settings.json updated'; systemctl restart numidium 2>/dev/null || true" < "$tmp/settings.json"
+    ;;
+
+  migrate)
+    tmp="$(mktemp -d)"; trap 'rm -rf "$tmp"' EXIT
+    vps_settings > "$tmp/settings.json"
+    cp "$here/migrate-load-order.py" "$tmp/"
+    stamp="$(date +%Y%m%d-%H%M%S)"
+    tar czf - -C "$tmp" settings.json migrate-load-order.py |
+      ssh_vps "set -e; umask 077; work=\$(mktemp -d); tar xzf - -C \$work; cd $remote
+        python3 -c 'import json,os,sys; s=json.load(open(sys.argv[1])); m=[p for p in s[\"loadOrder\"] if not os.path.exists(p)]; sys.exit(\"plugins not on the VPS: \" + \", \".join(m)) if m else None' \$work/settings.json
+        python3 \$work/migrate-load-order.py plugins server-settings.json \$work/settings.json world/changeForms
+        systemctl stop numidium
+        tar czf world-backup-$stamp.tgz world numidium-accounts.json server-settings.json
+        echo 'world backed up as world-backup-$stamp.tgz'
+        python3 \$work/migrate-load-order.py plugins server-settings.json \$work/settings.json world/changeForms --write
+        chown -R numidium:numidium world
+        chown numidium:numidium \$work/settings.json; mv \$work/settings.json server-settings.json
+        rm -rf \$work; echo 'server-settings.json updated'; systemctl start numidium"
     ;;
 
   plugins)
