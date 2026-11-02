@@ -14,6 +14,7 @@ the repo is at `E:\Jarldom\skymp` and the test game copy at `E:\Jarldom\SkyrimDe
 | `bodyslide/add-refits-to-groups.py` | run with `SliderSets` and `Numidium.xml` | Adds the clothing refit projects to the groups and reports output files claimed twice; its skip list records which variant won each clash. Dry run unless `--write` |
 | `Build Numidium Bodies.bat` | `E:\Jarldom\` | Builds both groups with BodySlide's command line, with morphs (`--trimorphs`) for RaceMenu's body sliders |
 | `package-client.ps1` | run after a build | Packages our client files from `build\dist\client` into `build\numidium-client\` (a zip plus `numidium-client.json` with version, size and SHA-256) for the launcher to install. Leaves out developer files, the per-player settings file and Address Library for other game versions; SKSE isn't included, the launcher fetches it from its own site. Also copies `numidium-modlist.json`, and with `-Collection <archive or collection.json>` the Nexus collection's `collection.json` |
+| `plugins/` | the client package's `Data` | Plugins of our own, such as the empty USSEP stand-in (see its README) |
 | `numidium-modlist.json` | next to the client package | What the Nexus collection can't say: mods the launcher installs itself (SKSE) and per-file install rules, e.g. a DLL for the game folder. The launcher installs the collection's mods with the FOMOD choices recorded in its `collection.json` |
 | `release.ps1` | run from a clean, pushed commit | Packages the client, builds the launcher with the same version and gathers the release's six files in `build\numidium-release\<version>`; `-Publish` creates the GitHub release through the GitHub CLI |
 | `patch-racemenu-height.py` | run with the game's `Data` folder | Limits RaceMenu's Height slider to 0.95–1.05 by patching the installed `RaceMenu.bsa`'s slider script into a loose `Scripts\racemenuplugin.pex` (players patch their own copy; no modified RaceMenu file is shipped). The server clamps height to the same range either way |
@@ -40,6 +41,15 @@ Steam game folder:
   It lists the plugins the mod installs: new ones go at the end of `loadOrder`
   in `server-settings.json` and in `skyrimdev-plugins.txt` (the list only grows).
 - `remove <mod>`, `after <mod> <other mod>`, `list`.
+
+Saved inventories, equipment and appearance keep raw form ids, whose top byte is
+the plugin's position, so a plugin added at the end is the simple case. When
+plugins move instead (one removed, or a master-flagged one added: the game loads
+those before every regular plugin, so `loadOrder` lists them there too), deploy
+with `vps/deploy-vps.sh migrate` rather than `settings`: it backs up the world and
+rewrites the saved ids for the new order (`vps/migrate-load-order.py`, which
+records the order in `world/load-order.json` so it never runs twice). Upload the
+plugins first; the VPS keeps removed plugins' files, which the migration reads.
 
 The Nexus collection page isn't updated by this. Players don't need it (the
 launcher links each mod's own page), so it can stay as it is.
@@ -126,7 +136,16 @@ older version's mesh paths). Height and Body Scales still apply in them; only th
 vanilla.
 
 The new plugins were appended to the load order so earlier plugins keep their slots: saved
-inventories store raw form ids, so after launch only ever add plugins at the end.
+inventories store raw form ids (see "Changing the mod list" for when plugins have to move).
+
+## Cities
+
+| Mod | Notes |
+|---|---|
+| Enhanced Solitude SSE 2.8 | Replaces The Great City of Solitude, removed in the same change (its 16 saved references moved aside on the VPS). Master-flagged. Its ES Exterior FPS Boost patch is left out: it needs eFPS, whose invisible occlusion walls would hide the other town mods' buildings without patches for each |
+| Ultimate Markarth 1.0 | Master-flagged; lists USSEP as a master, which gets the empty stand-in in `plugins/` |
+| JK's Markarth Outskirts 2.0.1 | Light plugin |
+| ClefJ's Karthwasten 1.3 | The Great Cities doesn't touch Karthwasten |
 
 Notes:
 

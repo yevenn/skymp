@@ -8,6 +8,9 @@
     "E:/Jarldom/SkyrimDev/Data/HearthFires.esm",
     "E:/Jarldom/SkyrimDev/Data/Dragonborn.esm",
     "E:/Jarldom/SkyrimDev/Data/Sentinel - Master Plugin.esp",
+    "E:/Jarldom/SkyrimDev/Data/Unofficial Skyrim Special Edition Patch.esp",
+    "E:/Jarldom/SkyrimDev/Data/Enhanced Solitude SSE.esp",
+    "E:/Jarldom/SkyrimDev/Data/Ultimate Markarth.esp",
     "E:/Jarldom/SkyrimDev/Data/SkyUI_SE.esp",
     "E:/Jarldom/SkyrimDev/Data/CommonClothes.esp",
     "E:/Jarldom/SkyrimDev/Data/JK's Whiterun's Outskirts.esp",
@@ -24,7 +27,6 @@
     "E:/Jarldom/SkyrimDev/Data/MoreCraftableEquipment_CloaksandCapes.esp",
     "E:/Jarldom/SkyrimDev/Data/Sentinel - City Guards.esp",
     "E:/Jarldom/SkyrimDev/Data/The Great Cities - Minor Cities and Towns.esp",
-    "E:/Jarldom/SkyrimDev/Data/The Great City of Solitude.esp",
     "E:/Jarldom/SkyrimDev/Data/WindhelmSSE.esp",
     "E:/Jarldom/SkyrimDev/Data/Mage Clothing Expansion.esp",
     "E:/Jarldom/SkyrimDev/Data/Common Clothing Expanded.esp",
@@ -43,7 +45,9 @@
     "E:/Jarldom/SkyrimDev/Data/evgnnsmpaccessories.esp",
     "E:/Jarldom/SkyrimDev/Data/FlawnsArgonians - Eyes, Replacer Plus.esp",
     "E:/Jarldom/SkyrimDev/Data/FlawnsArgonians - Clawed Feet.esp",
-    "E:/Jarldom/SkyrimDev/Data/EnhancedKhajiit_feet.esp"
+    "E:/Jarldom/SkyrimDev/Data/EnhancedKhajiit_feet.esp",
+    "E:/Jarldom/SkyrimDev/Data/ClefJs Karthwasten.esp",
+    "E:/Jarldom/SkyrimDev/Data/JK's Markarth Outskirts.esp"
   ],
   "master" : "",
   "maxPlayers" : 100,

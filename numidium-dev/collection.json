@@ -1822,28 +1822,6 @@
       "phase": 0
     },
     {
-      "name": "The Great City of Solitude 2.02",
-      "version": "2.02",
-      "optional": false,
-      "domainName": "skyrimspecialedition",
-      "source": {
-        "type": "nexus",
-        "modId": 22243,
-        "fileId": 123645,
-        "md5": "2a8bb59601685edba367a4d3f5d11390",
-        "fileSize": 4453936,
-        "logicalFilename": "The Great City of Solitude 2.02",
-        "updatePolicy": "exact",
-        "tag": "9oA4F5sxVdQ"
-      },
-      "author": "soldierofwar",
-      "details": {
-        "category": "Cities, Towns, Villages, and Hamlets",
-        "type": ""
-      },
-      "phase": 0
-    },
-    {
       "name": "Vanilla hair remake",
       "version": "1.0.2",
       "optional": false,
@@ -2521,6 +2499,94 @@
       "author": "Syllux",
       "details": {
         "category": "Body, Face, and Hair",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Enhanced Solitude SSE",
+      "version": "2.8",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 27816,
+        "fileId": 304942,
+        "md5": "ed06ed9829d9f608f5cfffc05b2805b0",
+        "fileSize": 538882804,
+        "logicalFilename": "Enhanced Solitude SSE",
+        "updatePolicy": "exact",
+        "tag": "PEo-CxJFmP"
+      },
+      "author": "kojak747 and the community",
+      "details": {
+        "category": "Overhauls",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "Ultimate Markarth",
+      "version": "1.0",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 66024,
+        "fileId": 275003,
+        "md5": "97987312ab46089d8bc16c11f44315cb",
+        "fileSize": 18225524,
+        "logicalFilename": "Ultimate Markarth",
+        "updatePolicy": "exact",
+        "tag": "8ZnqN_LIrj"
+      },
+      "author": "RemixandRevive - asbj0813 - reindeer51 - Domenicus7 - grroott2 - Derwan",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "JK's Markarth Outskirts",
+      "version": "2.0.1",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 93006,
+        "fileId": 744740,
+        "md5": "8a235bc6fb552ce87457da766cfc6635",
+        "fileSize": 998579,
+        "logicalFilename": "JK's Markarth Outskirts",
+        "updatePolicy": "exact",
+        "tag": "SLmwNnpRyp"
+      },
+      "author": "Jkrojmal",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
+        "type": ""
+      },
+      "phase": 0
+    },
+    {
+      "name": "ClefJ's Karthwasten",
+      "version": "1.3",
+      "optional": false,
+      "domainName": "skyrimspecialedition",
+      "source": {
+        "type": "nexus",
+        "modId": 30947,
+        "fileId": 487613,
+        "md5": "86cb69172008af009735c1ff8cb3573d",
+        "fileSize": 2287860,
+        "logicalFilename": "ClefJ's Karthwasten",
+        "updatePolicy": "exact",
+        "tag": "R_eC5gFAJM"
+      },
+      "author": "ClefJ",
+      "details": {
+        "category": "Cities, Towns, Villages, and Hamlets",
         "type": ""
       },
       "phase": 0

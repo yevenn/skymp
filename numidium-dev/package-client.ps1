@@ -50,6 +50,10 @@ if (Test-Path $zipPath) { Remove-Item $zipPath }
 $extra = @{
   "Data\CalienteTools\BodySlide\SliderGroups\Numidium.xml" = (Join-Path $PSScriptRoot "bodyslide\Numidium.xml")
 }
+# Plugins of our own (an empty stand-in master; see plugins\README.md)
+foreach ($plugin in Get-ChildItem (Join-Path $PSScriptRoot "plugins") -File | Where-Object { $_.Extension -in ".esp", ".esm", ".esl" }) {
+  $extra["Data\$($plugin.Name)"] = $plugin.FullName
+}
 
 # Licenses and credits, in Numidium\Licenses: the GPL/AGPL texts, where the source
 # is, and the notices of everything bundled (one per vcpkg package built in)

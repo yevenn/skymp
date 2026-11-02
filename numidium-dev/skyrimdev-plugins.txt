@@ -1,6 +1,9 @@
 # Plugins enabled in the SkyrimDev test copy, in load order, after the base game.
 # Must match the server's loadOrder in server-settings.json.
 Sentinel - Master Plugin.esp
+Unofficial Skyrim Special Edition Patch.esp
+Enhanced Solitude SSE.esp
+Ultimate Markarth.esp
 SkyUI_SE.esp
 CommonClothes.esp
 JK's Whiterun's Outskirts.esp
@@ -17,7 +20,6 @@ MCMHelper.esp
 MoreCraftableEquipment_CloaksandCapes.esp
 Sentinel - City Guards.esp
 The Great Cities - Minor Cities and Towns.esp
-The Great City of Solitude.esp
 WindhelmSSE.esp
 Mage Clothing Expansion.esp
 Common Clothing Expanded.esp
@@ -38,3 +40,5 @@ evgnnsmpaccessories.esp
 FlawnsArgonians - Eyes, Replacer Plus.esp
 FlawnsArgonians - Clawed Feet.esp
 EnhancedKhajiit_feet.esp
+ClefJs Karthwasten.esp
+JK's Markarth Outskirts.esp
